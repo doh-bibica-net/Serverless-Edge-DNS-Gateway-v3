@@ -70,6 +70,7 @@ ALLOW_COUNT=$(wc -l < "$ALLOW_OUT" | tr -d ' ' || echo 0)
 cat <<EOF > database/stats.json
 {
   "blocklistSize": ${BLOCK_COUNT:-0},
-  "allowlistSize": ${ALLOW_COUNT:-0}
+  "allowlistSize": ${ALLOW_COUNT:-0},
+  "_updated": $(date +%s%3N)
 }
 EOF
