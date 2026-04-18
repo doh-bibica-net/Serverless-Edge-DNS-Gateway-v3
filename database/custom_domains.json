@@ -2,5 +2,7 @@
   "redirect_rules": [],
   "private_tlds": [],
   "mullvad_upstream": [],
-  "blocklist": []
+  "blocklist": [
+    "226669.com"
+  ]
 }
