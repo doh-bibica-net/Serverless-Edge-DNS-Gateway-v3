@@ -1928,6 +1928,7 @@
                         const plain = await crypto.subtle.decrypt({name: 'AES-GCM', iv}, key, cipher);
                         return new TextDecoder().decode(plain);
                     } catch { return null; }
+                };
                 const register = async () => {
                     if (regPass.value !== regPass2.value) { authError.value = 'Passwords do not match'; return; }
                     if (!regPAT.value || regPAT.value.length < 10) { authError.value = 'Invalid PAT'; return; }
