@@ -12,7 +12,7 @@
   "BLOCK_AAAA": true,
   "BLOCK_PTR": true,
   "BLOCK_HTTPS": true,
-  "BLOCK_PRIVATE_TLD": true,
+  "BLOCK_PRIVATE_TLD": false,
   "DNS_REDIRECT_ENABLED": false,
   "MULLVAD_UPSTREAM_ENABLED": false,
   "DEBUG_ENABLED": false
