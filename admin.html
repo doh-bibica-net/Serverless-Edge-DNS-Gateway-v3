@@ -1095,16 +1095,27 @@
                             d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
                     </svg>
                 </div>
-                <h2>Create Admin Account</h2>
-                <p>First account becomes the administrator</p>
+                <h2>Gateway Setup</h2>
+                <p>Configure your GitHub repository to store data</p>
                 <div v-if="authError" class="login-error">{{ authError }}</div>
-                <div class="fg"><label class="fl">Username</label><input class="fi" v-model="regUser"
-                        placeholder="admin" autofocus @keyup.enter="register"></div>
-                <div class="fg"><label class="fl">Password</label><input type="password" class="fi" v-model="regPass"
-                        placeholder="Min 6 characters" @keyup.enter="register"></div>
-                <div class="fg"><label class="fl">Confirm Password</label><input type="password" class="fi"
-                        v-model="regPass2" placeholder="Confirm password" @keyup.enter="register"></div>
-                <button @click="register" class="btn btn-p login-btn">Create Account</button>
+                
+                <div class="fg"><label class="fl">GitHub Owner</label>
+                    <input class="fi" v-model="regOwner" placeholder="Username or Organization" autofocus @keyup.enter="register"></div>
+                <div class="fg"><label class="fl">GitHub Repository</label>
+                    <input class="fi" v-model="regRepo" placeholder="Repository Name" @keyup.enter="register"></div>
+                <div class="fg">
+                    <label class="fl" style="display:flex; justify-content:space-between">
+                        <span>GitHub PAT</span>
+                        <a href="https://github.com/settings/tokens/new" target="_blank" style="text-transform:none; color:var(--accent); text-decoration:none">How to get one?</a>
+                    </label>
+                    <input type="password" class="fi" v-model="regPAT" placeholder="ghp_... or github_pat_..." @keyup.enter="register">
+                </div>
+                <div class="fg"><label class="fl">Management Password</label>
+                    <input type="password" class="fi" v-model="regPass" placeholder="Min 6 characters" @keyup.enter="register"></div>
+                <div class="fg"><label class="fl">Confirm Password</label>
+                    <input type="password" class="fi" v-model="regPass2" placeholder="Confirm password" @keyup.enter="register"></div>
+                
+                <button @click="register" class="btn btn-p login-btn">Complete Setup</button>
             </div>
         </div>
 
@@ -1733,7 +1744,7 @@
 
                 // Auth
                 const loginUser = ref(''); const loginPass = ref('');
-                const regUser = ref(''); const regPass = ref(''); const regPass2 = ref('');
+                const regOwner = ref(''); const regRepo = ref(''); const regPAT = ref(''); const regPass = ref(''); const regPass2 = ref('');
                 const authError = ref('');
 
                 // Data
@@ -1832,12 +1843,12 @@
                 });
 
 // ===== GITHUB API & ENCRYPTION =====
-                const GITHUB_OWNER = 'bibicadotnet';
-                const GITHUB_REPO = 'Serverless-Edge-DNS-Gateway-main';
+                const GITHUB_OWNER = ref(localStorage.getItem('dnsadm_owner') || '');
+                const GITHUB_REPO = ref(localStorage.getItem('dnsadm_repo') || '');
                 let sessionPAT = '';
 
                 const getSha = async (path) => {
-                    const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`, {
+                    const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/contents/${path}`, {
                         headers: { 'Authorization': `token ${sessionPAT}` }
                     });
                     if (res.ok) {
@@ -1851,7 +1862,7 @@
                     if (!sessionPAT) throw new Error('Not logged in');
                     const sha = await getSha(path);
                     const encoded = btoa(unescape(encodeURIComponent(contentStr)));
-                    const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`, {
+                    const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/contents/${path}`, {
                         method: 'PUT',
                         headers: {
                             'Authorization': `token ${sessionPAT}`,
@@ -1868,7 +1879,7 @@
                 };
 
                 const githubGet = async (path) => {
-                    const res = await fetch(`https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/main/${path}?t=${Date.now()}`);
+                    const res = await fetch(`https://raw.githubusercontent.com/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/main/${path}?t=${Date.now()}`);
                     if(res.ok) return await res.json();
                     return null;
                 };
@@ -1909,12 +1920,26 @@
                 // ===== AUTH =====
                 const register = async () => {
                     if (regPass.value !== regPass2.value) { authError.value = 'Passwords do not match'; return; }
-                    if (!regUser.value || regUser.value.length < 2) { authError.value = 'Missing PAT'; return; }
+                    if (!regPAT.value || regPAT.value.length < 10) { authError.value = 'Invalid PAT'; return; }
+                    if (!regOwner.value || !regRepo.value) { authError.value = 'Missing GitHub Owner or Repo'; return; }
                     try {
-                        const encrypted = await aesEncrypt(regUser.value, regPass.value);
-                        sessionPAT = regUser.value;
-                        const userObj = { needsSetup: false, username: "admin", encrypted_pat: encrypted };
+                        sessionPAT = regPAT.value;
+                        GITHUB_OWNER.value = regOwner.value.trim();
+                        GITHUB_REPO.value = regRepo.value.trim();
+
+                        const encrypted = await aesEncrypt(regPAT.value, regPass.value);
+                        const userObj = { 
+                            needsSetup: false, 
+                            username: "admin", 
+                            owner: GITHUB_OWNER.value,
+                            repo: GITHUB_REPO.value,
+                            encrypted_pat: encrypted 
+                        };
                         await githubPut('database/admin_user.json', JSON.stringify(userObj, null, 2));
+
+                        localStorage.setItem('dnsadm_owner', GITHUB_OWNER.value);
+                        localStorage.setItem('dnsadm_repo', GITHUB_REPO.value);
+
                         appState.value = 'admin'; showToast('Setup successful!');
                         await loadConfig();
                     } catch(e) { authError.value = e.message; }
@@ -2008,7 +2033,7 @@
                     syncing.value = true;
                     showToast('Triggering Github Action...', 'info');
                     try {
-                        const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/actions/workflows/Update_DNS_Blocklists.yml/dispatches`, {
+                        const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/actions/workflows/Update_DNS_Blocklists.yml/dispatches`, {
                             method: 'POST',
                             headers: { 'Authorization': `token ${sessionPAT}`, 'Content-Type': 'application/json' },
                             body: JSON.stringify({ ref: 'main' })
@@ -2024,6 +2049,25 @@
 
                 // ===== INIT =====
                 onMounted(async () => {
+                    if (!GITHUB_OWNER.value || !GITHUB_REPO.value) {
+                        try {
+                            const res = await fetch(`/database/admin_user.json?t=${Date.now()}`);
+                            if (res.ok) {
+                                const siteU = await res.json();
+                                if (siteU && siteU.owner && siteU.repo) {
+                                    GITHUB_OWNER.value = siteU.owner;
+                                    GITHUB_REPO.value = siteU.repo;
+                                    localStorage.setItem('dnsadm_owner', siteU.owner);
+                                    localStorage.setItem('dnsadm_repo', siteU.repo);
+                                }
+                            }
+                        } catch(e) {}
+                    }
+
+                    if (!GITHUB_OWNER.value || !GITHUB_REPO.value) {
+                         appState.value = 'setup';
+                         return;
+                    }
                     try {
                         const u = await githubGet('database/admin_user.json');
                         if (!u || u.needsSetup) { appState.value = 'setup'; return; }
@@ -2033,7 +2077,7 @@
 
                 return {
                     appState, tab, token, adminUsername, config, stats,
-                    loginUser, loginPass, regUser, regPass, regPass2, authError,
+                    loginUser, loginPass, regOwner, regRepo, regPAT, regPass, regPass2, authError,
                     lists, listTab, customUrls, currentRawText, currentRawUrlText, newUrl,
                     saving, savingUrl, savingList, syncing, listsLoading, toastMsg, toastType,
                     tabLabels, listTabLabels, textPlaceholders, urlPlaceholders,
