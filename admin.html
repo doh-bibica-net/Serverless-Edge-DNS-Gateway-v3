@@ -1605,14 +1605,14 @@
                             </div>
 
                             <div style="display: flex; justify-content: space-between; margin-top: 15px;">
-                                <button @click="saveUpstreams" class="btn btn-save" style="opacity: 0.6; pointer-events: none;">
+                                <button @click="saveUpstreams" class="btn btn-save">
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                         stroke-width="2">
                                         <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
                                         <polyline points="17 21 17 13 7 13 7 21" />
                                         <polyline points="7 3 7 8 15 8" />
                                     </svg>
-                                    Changes Staged Locally
+                                    Stage Upstream Changes
                                 </button>
                                 <button @click="resetUpstreams" class="btn btn-s">
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2141,14 +2141,20 @@
                     } catch(e) { showToast('Load config failed', 'error'); }
                 };
 
-                const updateConfig = (updates) => {
+                const updateConfig = (updates, message = 'Settings staged locally') => {
                     config.value = { ...config.value, ...updates };
                     hasChanges.value = true;
-                    showToast('Settings staged locally', 'info');
+                    showToast(message, 'info');
                 };
 
-                const toggleFeature = k => updateConfig({ [k]: !config.value[k] });
-                const saveUpstreams = () => updateConfig({ UPSTREAM_PRIMARY: config.value.UPSTREAM_PRIMARY, UPSTREAM_FALLBACK: config.value.UPSTREAM_FALLBACK, UPSTREAM_GEO_BYPASS: config.value.UPSTREAM_GEO_BYPASS, UPSTREAM_TIMEOUT: parseInt(config.value.UPSTREAM_TIMEOUT)||5000, ECS_PREFIX_V4: parseInt(config.value.ECS_PREFIX_V4)||24, ECS_PREFIX_V6: parseInt(config.value.ECS_PREFIX_V6)||48, ALL_LISTS_REFRESH_INTERVAL: parseInt(config.value.ALL_LISTS_REFRESH_INTERVAL)||3600000 });
+                const toggleFeature = k => {
+                    const f = allFeatures.value.find(x => x.key === k);
+                    const label = f ? f.label : k;
+                    const newState = !config.value[k];
+                    updateConfig({ [k]: newState }, `${label} ${newState ? 'enabled ✅' : 'disabled ❌'}`);
+                };
+                
+                const saveUpstreams = () => updateConfig({ UPSTREAM_PRIMARY: config.value.UPSTREAM_PRIMARY, UPSTREAM_FALLBACK: config.value.UPSTREAM_FALLBACK, UPSTREAM_GEO_BYPASS: config.value.UPSTREAM_GEO_BYPASS, UPSTREAM_TIMEOUT: parseInt(config.value.UPSTREAM_TIMEOUT)||5000, ECS_PREFIX_V4: parseInt(config.value.ECS_PREFIX_V4)||24, ECS_PREFIX_V6: parseInt(config.value.ECS_PREFIX_V6)||48, ALL_LISTS_REFRESH_INTERVAL: parseInt(config.value.ALL_LISTS_REFRESH_INTERVAL)||3600000 }, 'Upstream DNS configurations staged 🔧');
                 const resetUpstreams = () => { config.value.UPSTREAM_PRIMARY = 'https://bu0eg1tdzu.cloudflare-gateway.com/dns-query'; config.value.UPSTREAM_FALLBACK = 'https://rhpcv957tj.cloudflare-gateway.com/dns-query'; config.value.UPSTREAM_GEO_BYPASS = 'https://dns.mullvad.net/dns-query'; config.value.UPSTREAM_TIMEOUT=5000; config.value.ECS_PREFIX_V4=24; config.value.ECS_PREFIX_V6=48; config.value.ALL_LISTS_REFRESH_INTERVAL=3600000; showToast('Reset to defaults! Click save.', 'info'); };
 
                 // ===== LISTS =====
