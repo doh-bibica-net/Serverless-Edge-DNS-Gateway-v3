@@ -3,6 +3,7 @@
   "private_tlds": [],
   "mullvad_upstream": [],
   "blocklist": [
+    "226669.com",
     "226669.com"
   ]
 }
