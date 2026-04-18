@@ -1351,17 +1351,17 @@
                                 </div>
                                 <div class="stat-card err">
                                     <div class="stat-label">Private TLDs</div>
-                                    <div class="stat-value">{{ fmt(stats.privateTldsSize || ((lists.private_tlds||[]).length)) }}</div>
+                                    <div class="stat-value">{{ fmt((stats.privateTldsSize || 0) + ((lists.private_tlds||[]).length)) }}</div>
                                     <div class="stat-sub">Internal domains (merged)</div>
                                 </div>
                                 <div class="stat-card">
                                     <div class="stat-label">Mullvad</div>
-                                    <div class="stat-value">{{ fmt(stats.mullvadDomainsSize || ((lists.mullvad_upstream||[]).length)) }}</div>
+                                    <div class="stat-value">{{ fmt((stats.mullvadDomainsSize || 0) + ((lists.mullvad_upstream||[]).length)) }}</div>
                                     <div class="stat-sub">Upstream domains (merged)</div>
                                 </div>
                                 <div class="stat-card warn">
                                     <div class="stat-label">Redirect Rules</div>
-                                    <div class="stat-value">{{ fmt(stats.redirectRulesSize || ((lists.redirect_rules||[]).length)) }}</div>
+                                    <div class="stat-value">{{ fmt((stats.redirectRulesSize || 0) + ((lists.redirect_rules||[]).length)) }}</div>
                                     <div class="stat-sub">CNAME overrides (merged)</div>
                                 </div>
                             </div>
@@ -1662,7 +1662,7 @@
                                         <div class="card-body">
                                             <div class="source-info">
                                                 <span class="source-path">{{ config.REDIRECT_RULES_URL }}</span>
-                                                <span class="badge badge-i">{{ fmt(stats.redirectRulesSize || ((lists.redirect_rules||[]).length)) }} total
+                                                <span class="badge badge-i">{{ fmt((stats.redirectRulesSize || 0) + ((lists.redirect_rules||[]).length)) }} total
                                                     (merged)</span>
                                             </div>
                                             <div class="fh" style="margin-top:10px">Static file + custom rules above are
@@ -1725,8 +1725,8 @@
                                                 <span class="badge badge-i">
                                                     {{ listTab==='blocklist' ? fmt(stats.blocklistSize || ((lists.blocklist||[]).length)) :
                                                     listTab==='allowlist' ? fmt(stats.allowlistSize || ((lists.allowlist||[]).length)) : 
-                                                    listTab==='private_tlds' ? fmt(stats.privateTldsSize || ((lists.private_tlds||[]).length)) : 
-                                                    fmt(stats.mullvadDomainsSize || ((lists.mullvad_upstream||[]).length)) }} total (merged)
+                                                    listTab==='private_tlds' ? fmt((stats.privateTldsSize || 0) + ((lists.private_tlds||[]).length)) : 
+                                                    fmt((stats.mullvadDomainsSize || 0) + ((lists.mullvad_upstream||[]).length)) }} total (merged)
                                                 </span>
                                             </div>
                                             <div class="fh" style="margin-top:10px">Static file + external URLs + custom
