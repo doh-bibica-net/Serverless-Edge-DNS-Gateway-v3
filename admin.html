@@ -2348,9 +2348,17 @@
                         if (!patchRes.ok) throw new Error(`Failed to update branch: ${patchRes.statusText}`);
 
                         // 5. Monitor Cloudflare Sync fully before triggering workflow
+                        let needsWorkflow = false;
+                        try {
+                            const oldSnap = JSON.parse(initialSnapshot.value);
+                            if (JSON.stringify(oldSnap.u) !== JSON.stringify(customUrls.value)) needsWorkflow = true;
+                            if (JSON.stringify(oldSnap.cd?.blocklist) !== JSON.stringify(lists.value?.blocklist)) needsWorkflow = true;
+                            if (JSON.stringify(oldSnap.cd?.allowlist) !== JSON.stringify(lists.value?.allowlist)) needsWorkflow = true;
+                        } catch(e) { needsWorkflow = true; }
+
                         syncState.value = 'cloudflare';
-                        syncMsg.value = 'Waiting for Cloudflare Deployment (1/2)...';
-                        showToast('Saved to Github! Waiting for Cloudflare deployment (1/2)...', 'info', 10000);
+                        syncMsg.value = needsWorkflow ? 'Waiting for Cloudflare Deployment (1/2)...' : 'Waiting for Cloudflare Deployment...';
+                        showToast(`Saved to Github! Waiting for Cloudflare deployment${needsWorkflow ? ' (1/2)' : ''}...`, 'info', 10000);
                         const edgeSynced = await pollCloudflareSync(timeMs);
                         
                         if (!edgeSynced) {
@@ -2358,6 +2366,15 @@
                             syncing.value = false;
                             syncState.value = 'idle';
                             return;
+                        }
+
+                        if (!needsWorkflow) {
+                             showToast('Settings saved & deployed successfully! No need to run Workflow.', 'success', 5000);
+                             await loadConfig();
+                             hasChanges.value = false;
+                             syncState.value = 'idle';
+                             syncing.value = false;
+                             return;
                         }
 
                         // Step 2. Trigger Action
