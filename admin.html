@@ -1645,7 +1645,7 @@
                                             </button>
                                         </div>
                                         <div class="input-row" style="margin-bottom:16px;">
-                                            <textarea class="fi fi-mono" v-model="currentRawText" @input="saveListText"
+                                            <textarea class="fi fi-mono" v-model="currentRawText"
                                                 :placeholder="textPlaceholders[listTab]"
                                                 rows="12"
                                                 style="resize: vertical; white-space: pre; overflow-x: auto; box-sizing: border-box; width: 100%; font-size: 13px; line-height: 1.6; padding: 12px;"></textarea>
@@ -1698,7 +1698,7 @@
                                                 </button>
                                             </div>
                                             <div class="input-row" style="margin-bottom:16px;">
-                                                <textarea class="fi fi-mono" v-model="currentRawUrlText" @input="saveUrlText"
+                                                <textarea class="fi fi-mono" v-model="currentRawUrlText"
                                                     :placeholder="urlPlaceholders[listTab]"
                                                     rows="5"
                                                     style="resize: vertical; white-space: pre; overflow-x: auto; box-sizing: border-box; width: 100%; font-size: 13px; line-height: 1.6; padding: 12px;"></textarea>
@@ -2107,6 +2107,7 @@
                    const lt = listTab.value;
                    if(['blocklist','allowlist'].includes(lt)) {
                       currentRawUrlText.value = customUrls.value[lt+'_text'] || (customUrls.value[lt] ? customUrls.value[lt].join('\n') : '');
+                      currentRawText.value = lists.value[lt] ? lists.value[lt].join('\n') : '';
                    } else {
                       if(!lists.value[lt]) currentRawText.value = '';
                       else if(lt === 'redirect_rules') currentRawText.value = lists.value[lt].map(r => `${r.source} ${r.target}`).join('\n');
@@ -2278,10 +2279,14 @@
                             headers: { 'Authorization': `Bearer ${sessionPAT}`, 'Content-Type': 'application/json' },
                             body: JSON.stringify({ ref: 'main' })
                         });
-                        if(res.ok) showToast('Syncing workflow started!');
+                        if(res.ok) showToast('Workflow started! Please wait up to 60s for Cloudflare deployment.', 'success');
                         else {
                             const err = await res.json().catch(()=>({}));
-                            showToast('Workflow Fail: ' + (err.message || res.statusText), 'error');
+                            let msg = err.message || res.statusText;
+                            if (res.status === 404 || res.status === 403) {
+                                msg += ' (Hint: Make sure your PAT has the "workflow" scope enabled!)';
+                            }
+                            showToast('Workflow Fail: ' + msg, 'error');
                         }
                     } catch(e) { showToast('Sync Err: ' + e.message, 'error'); }
                     setTimeout(() => { syncing.value = false; }, 3000);
