@@ -736,44 +736,70 @@
             text-align: center;
         }
 
-        /* ===== TOAST ===== */
-        .toast {
-            position: fixed;
-            top: 70px;
-            right: 24px;
-            padding: 11px 18px;
+        /* ===== NOTIFICATION LOGS ===== */
+        .log-dropdown {
+            position: absolute;
+            top: 40px;
+            right: 0;
+            width: 320px;
+            background: var(--bg-1);
+            border: 1px solid var(--border);
             border-radius: 8px;
-            font-size: 13.5px;
-            font-weight: 500;
-            z-index: 200;
-            transform: translateY(-40px);
-            opacity: 0;
-            transition: all 0.28s cubic-bezier(0.23, 1, 0.32, 1);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-            max-width: 340px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            z-index: 300;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            text-align: left;
+            cursor: default;
         }
 
-        .toast.show {
-            transform: translateY(0);
-            opacity: 1;
+        .log-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.02);
+            color: var(--text);
         }
 
-        .toast-success {
-            background: #1a3a21;
-            color: var(--ok);
-            border: 1px solid rgba(63, 185, 80, 0.3);
+        .log-clear {
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: normal;
+        }
+        .log-clear:hover { color: var(--err); }
+
+        .log-body {
+            max-height: 380px;
+            overflow-y: auto;
         }
 
-        .toast-error {
-            background: #3a1a1a;
-            color: var(--err);
-            border: 1px solid rgba(248, 81, 73, 0.3);
+        .log-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            font-size: 13px;
+            color: var(--text-2);
         }
+        .log-item:last-child { border-bottom: none; }
 
-        .toast-info {
-            background: #1a2a44;
-            color: var(--accent);
-            border: 1px solid rgba(56, 139, 253, 0.3);
+        .log-time { font-size: 11px; opacity: 0.6; }
+        .log-text { line-height: 1.4; margin-top: 4px; word-wrap: break-word; }
+
+        .log-type-success { color: var(--ok); font-size: 11px; font-weight: 600; }
+        .log-type-error { color: var(--err); font-size: 11px; font-weight: 600; }
+        .log-type-info { color: var(--accent); font-size: 11px; font-weight: 600; }
+        .log-type-warning { color: #d29922; font-size: 11px; font-weight: 600; }
+
+        .log-empty {
+            padding: 24px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 13px;
         }
 
         /* ===== ALERT ===== */
@@ -1282,12 +1308,35 @@
             <div class="main">
                 <header class="topbar">
                     <h2>{{ tabLabels[tab] }}</h2>
-                    <div class="topbar-right" style="gap: 12px;">
-                        <span v-if="appState === 'admin'" class="badge" :class="syncState === 'idle' ? 'badge-s' : 'badge-w'" style="font-family: monospace; display: flex; align-items: center; gap: 6px;" title="GitHub Status">
-                            <span v-if="syncState !== 'idle' || syncing" class="spinner-small" style="width: 10px; height: 10px; border-width: 1.5px; border-top-color: currentColor;"></span>
-                            <span v-else>⏱</span>
-                            {{ topbarStatus }}
-                        </span>
+                    <div class="topbar-right" style="gap: 12px; position: relative;">
+                        <!-- LOG DROPDOWN ANCHOR -->
+                        <div v-if="appState === 'admin'" style="position: relative;">
+                            <span class="badge" :class="syncState === 'idle' ? 'badge-s' : 'badge-w'" 
+                                  style="font-family: monospace; display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;" 
+                                  title="View Session Logs" @click="showNotifications = !showNotifications">
+                                <span v-if="syncState !== 'idle' || syncing" class="spinner-small" style="width: 10px; height: 10px; border-width: 1.5px; border-top-color: currentColor;"></span>
+                                <span v-else>⏱</span>
+                                {{ topbarStatus }}
+                            </span>
+                            
+                            <!-- LOG WINDOW -->
+                            <div v-if="showNotifications" class="log-dropdown">
+                                <div class="log-header">
+                                    📝 Session Logs
+                                    <span class="log-clear" @click.stop="notifications = []; showNotifications = false" title="Clear Logs">Clear</span>
+                                </div>
+                                <div class="log-body">
+                                    <div v-for="(log, idx) in notifications" :key="idx" class="log-item">
+                                        <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                                            <span :class="'log-type-' + log.type">{{ log.type === 'success' ? '✅ SUCCESS' : log.type === 'error' ? '❌ ERROR' : log.type === 'warning' ? '⚠️ WARN' : 'ℹ️ INFO' }}</span>
+                                            <span class="log-time">{{ log.time }}</span>
+                                        </div>
+                                        <div class="log-text">{{ log.msg }}</div>
+                                    </div>
+                                    <div v-if="notifications.length === 0" class="log-empty">No logs recorded yet in this session.</div>
+                                </div>
+                            </div>
+                        </div>
 
                         <div style="display: flex; gap: 8px; align-items: center;">
                             <button class="btn" @click="toggleTheme" title="Toggle Light/Dark Theme"
@@ -1743,9 +1792,6 @@
             </div><!-- /main -->
         </div><!-- /app -->
 
-        <!-- Toast -->
-        <div class="toast" :class="[toastMsg ? 'show' : '', 'toast-' + toastType]">{{ toastMsg }}</div>
-
     </div><!-- /#app -->
 
     <script>
@@ -1808,11 +1854,16 @@
                     return 'GitHub Status: Unknown';
                 });
 
-                // Toast
-                const toastMsg = ref(''); const toastType = ref('success');
+                const notifications = ref([]);
+                const showNotifications = ref(false);
+
                 const showToast = (m, t = 'success') => {
-                    toastMsg.value = m; toastType.value = t;
-                    setTimeout(() => toastMsg.value = '', 3200);
+                    const time = new Date().toLocaleTimeString();
+                    notifications.value.unshift({ time, msg: m, type: t });
+                    if (notifications.value.length > 50) notifications.value.pop();
+                    
+                    // Auto-show notifications if it's an error so the user doesn't miss it
+                    if (t === 'error') showNotifications.value = true;
                 };
 
                 const sysTime = ref(Date.now());
@@ -2297,30 +2348,38 @@
                         if (!patchRes.ok) throw new Error(`Failed to update branch: ${patchRes.statusText}`);
 
                         // 5. Monitor Cloudflare Sync fully before triggering workflow
+                        syncState.value = 'cloudflare';
+                        syncMsg.value = 'Waiting for Cloudflare Deployment (1/2)...';
                         showToast('Saved to Github! Waiting for Cloudflare deployment (1/2)...', 'info', 10000);
                         const edgeSynced = await pollCloudflareSync(timeMs);
                         
                         if (!edgeSynced) {
                             showToast('Timeout waiting for Deploy! Aborting orchestration.', 'error');
                             syncing.value = false;
+                            syncState.value = 'idle';
                             return;
                         }
 
                         // Step 2. Trigger Action
+                        syncState.value = 'github';
+                        syncMsg.value = 'Triggering Github Workflow...';
                         const oldRunId = await getLatestWorkflowRun();
                         showToast('Deploy 1 Success! Triggering Github workflow...', 'success', 5000);
                         const dispatched = await forceSync(true);
                         if (!dispatched) {
                             syncing.value = false;
+                            syncState.value = 'idle';
                             return;
                         }
 
                         // Step 3. Wait for Action completion
+                        syncMsg.value = 'Workflow generating Blocklists...';
                         showToast('Workflow running... Generating Blocklists...', 'info', 30000);
                         const wfSuccess = await waitForWorkflowCompletion(oldRunId);
                         if (!wfSuccess) {
                             showToast('Workflow deployment failed or timed out!', 'error');
                             syncing.value = false;
+                            syncState.value = 'idle';
                             return;
                         }
 
@@ -2335,11 +2394,14 @@
                         } catch(e) {}
 
                         if (finalSha !== newCommit.sha) {
+                             syncState.value = 'cloudflare';
+                             syncMsg.value = 'Waiting for final Cloudflare Edge Deployment (2/2)...';
                              showToast('Blocklists generated! Waiting for final Cloudflare deployment (2/2)...', 'info', 15000);
                              const deploy2 = await waitForCommitSuccess(finalSha);
                              if (!deploy2) {
                                   showToast('Timeout waiting for Final Deploy!', 'error');
                                   syncing.value = false;
+                                  syncState.value = 'idle';
                                   return;
                              }
                         }
@@ -2347,6 +2409,7 @@
                         showToast('All Tasks Completed Successfully! Reloading Dashboard...', 'success', 5000);
                         await loadConfig();
                         hasChanges.value = false;
+                        syncState.value = 'idle';
                         syncing.value = false;
                     } catch(e) {
                         syncState.value = 'idle';
@@ -2439,7 +2502,7 @@
                     appState, tab, adminUsername, config, stats, hasChanges, syncState, syncMsg,
                     loginUser, loginPass, regOwner, regRepo, regPAT, regUser, regPass, regPass2, authError,
                     lists, listTab, customUrls, currentRawText, currentRawUrlText, newUrl,
-                    saving, savingUrl, savingList, syncing, listsLoading, toastMsg, toastType,
+                    saving, savingUrl, savingList, syncing, listsLoading, notifications, showNotifications,
                     tabLabels, listTabLabels, textPlaceholders, urlPlaceholders,
                     features, filters, allFeatures,
                     activeFeatureCount, activeFilterCount, activeCount, totalCount, totalCustomEntries,
