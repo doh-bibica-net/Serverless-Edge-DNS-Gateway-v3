@@ -4,561 +4,2463 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Serverless Edge DNS Gateway</title>
-    <meta name="description" content="Secure DNS-over-HTTPS gateway with adblock, ECS injection, and geo-bypass.">
+    <title>Admin — Serverless Edge DNS Gateway</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <style>
-        :root {
-            --bg: #ffffff;
-            --card-bg: #ffffff;
-            --border: #e0e0e0;
-            --accent: #0969da;
-            --accent-hover: #0861c4;
-            --text: #1a1a1a;
-            --text-muted: #666;
-            --success: #2db74e;
-            --radius: 8px;
+        [v-cloak] {
+            display: none;
         }
 
-        * {
+        :root {
+            --sidebar-w: 240px;
+            --bg-canvas: #f6f8fa;
+            --bg-sidebar: #f6f8fa;
+            --bg-1: #ffffff;
+            --bg-2: #f3f4f6;
+            --bg-3: #e1e4e8;
+            --border: #d0d7de;
+            --border-s: #e1e4e8;
+            --text-1: #24292f;
+            --text-2: #57606a;
+            --text-3: #8c959f;
+            --accent: #0969da;
+            --accent-em: #0969da;
+            --accent-m: rgba(9, 105, 218, 0.1);
+            --ok: #2da44e;
+            --ok-m: rgba(45, 164, 78, 0.15);
+            --err: #cf222e;
+            --err-m: rgba(207, 34, 46, 0.15);
+            --warn: #bf8700;
+            --warn-m: rgba(210, 153, 34, 0.15);
+            --r: 8px;
+            --tr: 0.18s ease;
+        }
+
+        [data-theme="dark"] {
+            --bg-canvas: #0d1117;
+            --bg-sidebar: #010409;
+            --bg-1: #161b22;
+            --bg-2: #21262d;
+            --bg-3: #30363d;
+            --border: #30363d;
+            --border-s: #21262d;
+            --text-1: #e6edf3;
+            --text-2: #8b949e;
+            --text-3: #6e7681;
+            --accent: #58a6ff;
+            --accent-em: #1f6feb;
+            --accent-m: rgba(56, 139, 253, 0.15);
+            --ok: #3fb950;
+            --ok-m: rgba(63, 185, 80, 0.15);
+            --err: #f85149;
+            --err-m: rgba(248, 81, 73, 0.15);
+            --warn: #d29922;
+            --warn-m: rgba(210, 153, 34, 0.15);
+        }
+
+        *,
+        *::before,
+        *::after {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            line-height: 1.6;
-            min-height: 100vh;
-            padding: 40px 20px;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-        }
-
-        /* Header */
-        header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 40px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid var(--border);
-        }
-
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .brand-icon {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        h1 {
-            font-size: 24px;
-            font-weight: 600;
-        }
-
-        .github-btn {
-            background: transparent;
-            color: var(--text-muted);
-            padding: 8px 16px;
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            font-size: 13px;
-            font-weight: 500;
-            text-decoration: none;
-            cursor: pointer;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .github-btn:hover {
-            border-color: var(--text-muted);
-            color: var(--text);
-        }
-
-        /* Hero Section */
-        .hero {
-            margin-bottom: 40px;
-        }
-
-        .hero h2 {
-            font-size: 36px;
-            font-weight: 600;
-            margin-bottom: 12px;
-            line-height: 1.2;
-        }
-
-        .hero p {
-            font-size: 16px;
-            color: var(--text-muted);
-        }
-
-        /* Endpoint Card */
-        .endpoint-card {
-            background: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 28px;
-            margin-bottom: 32px;
-        }
-
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-        }
-
-        .status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 13px;
-            color: var(--success);
-            font-weight: 600;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            background: var(--success);
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0.5;
-            }
-        }
-
-        .card-label {
-            font-size: 12px;
-            color: var(--text-muted);
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        /* URL Box */
-        .url-box {
-            background: #f5f5f5;
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 12px 16px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 12px;
-        }
-
-        .url-text {
-            font-family: 'Courier New', monospace;
-            font-size: 13px;
-            color: var(--text);
-            flex: 1;
-            overflow: auto;
-            word-break: break-all;
-        }
-
-        .copy-btn {
-            background: none;
-            color: var(--text-muted);
-            border: none;
-            padding: 6px;
-            border-radius: var(--radius);
-            cursor: pointer;
-            transition: color 0.2s;
-            display: flex;
-            align-items: center;
-        }
-
-        .copy-btn:hover {
-            color: var(--accent);
-        }
-
-        .copy-btn.copied {
-            color: var(--success);
-        }
-
-        /* Feature Grid */
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
-            margin-bottom: 40px;
-        }
-
-        .feature {
-            border: 1px solid var(--border);
-            padding: 20px;
-            border-radius: var(--radius);
-            transition: all 0.3s;
-        }
-
-        .feature:hover {
-            border-color: var(--accent);
-            background: #f9f9f9;
-        }
-
-        .feature h3 {
-            font-size: 15px;
-            font-weight: 600;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .feature p {
-            font-size: 13px;
-            color: var(--text-muted);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: var(--bg-canvas);
+            color: var(--text-1);
             line-height: 1.5;
-        }
-
-        /* Info Section */
-        .info-box {
-            background: #f5f5f5;
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 20px;
-            margin-bottom: 40px;
-        }
-
-        .info-box h3 {
-            margin-bottom: 12px;
-            font-size: 16px;
-        }
-
-        .info-box ul {
-            list-style: none;
-            font-size: 13px;
-            color: var(--text-muted);
-            line-height: 1.8;
-        }
-
-        .info-box li {
-            margin-bottom: 6px;
-        }
-
-        /* Setup Sections */
-        .setup-section {
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            margin-bottom: 20px;
+            height: 100vh;
             overflow: hidden;
         }
 
-        .setup-header {
-            background: #f5f5f5;
-            padding: 16px 20px;
-            font-weight: 600;
-            font-size: 14px;
+        .app {
+            display: flex;
+            height: 100vh;
+            max-width: 1440px;
+            margin: 0 auto;
+            background: var(--bg-canvas);
+            border-left: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.03);
+        }
+
+        /* ===== SIDEBAR ===== */
+        .sidebar {
+            width: var(--sidebar-w);
+            background: var(--bg-sidebar);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .sidebar-brand {
+            padding: 18px 20px;
             border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar-brand-icon {
+            color: var(--accent);
+            flex-shrink: 0;
+        }
+
+        .sidebar-brand-text {
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 1.3;
+        }
+
+        .sidebar-brand-sub {
+            font-size: 11px;
+            color: var(--text-3);
+            font-weight: 400;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 8px 0;
+            overflow-y: auto;
+        }
+
+        .nav-section {
+            padding: 16px 20px 6px;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            color: var(--text-3);
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 20px;
+            color: var(--text-2);
+            cursor: pointer;
+            transition: all var(--tr);
+            border-left: 2px solid transparent;
+            font-size: 13.5px;
+            user-select: none;
+        }
+
+        .nav-item:hover {
+            color: var(--text-1);
+            background: var(--accent-m);
+        }
+
+        .nav-item.active {
+            color: var(--accent);
+            background: var(--accent-m);
+            border-left-color: var(--accent);
+            font-weight: 500;
+        }
+
+        .nav-item svg {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+            opacity: 0.8;
+        }
+
+        .nav-item.active svg {
+            opacity: 1;
+        }
+
+        .nav-badge {
+            margin-left: auto;
+            background: var(--bg-3);
+            color: var(--text-2);
+            font-size: 10px;
+            font-weight: 600;
+            padding: 1px 6px;
+            border-radius: 8px;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        .nav-item.active .nav-badge {
+            background: var(--accent-em);
+            color: #fff;
+        }
+
+        /* Sidebar footer / user */
+        .sidebar-footer {
+            border-top: 1px solid var(--border);
+            padding: 14px 20px;
+        }
+
+        .user-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .user-avatar {
+            width: 30px;
+            height: 30px;
+            background: var(--accent-em);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .user-name {
+            font-size: 13px;
+            font-weight: 500;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .btn-logout {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-2);
+            font-size: 12.5px;
+            cursor: pointer;
+            transition: all var(--tr);
+        }
+
+        .btn-logout:hover {
+            border-color: var(--err);
+            color: var(--err);
+            background: var(--err-m);
+        }
+
+        .btn-logout svg {
+            width: 13px;
+            height: 13px;
+        }
+
+        /* ===== MAIN ===== */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-width: 0;
+        }
+
+        .topbar {
+            padding: 14px 28px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .topbar h2 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .topbar-right {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .content-inner {
+            padding: 24px 28px;
+        }
+
+        /* ===== DASHBOARD ===== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 1000px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .stat-card {
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 18px 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--accent);
+        }
+
+        .stat-card.ok::before {
+            background: var(--ok);
+        }
+
+        .stat-card.warn::before {
+            background: var(--warn);
+        }
+
+        .stat-card.err::before {
+            background: var(--err);
+        }
+
+        .stat-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: var(--text-3);
+            margin-bottom: 10px;
+        }
+
+        .stat-value {
+            font-size: 26px;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .stat-value small {
+            font-size: 14px;
+            color: var(--text-2);
+            font-weight: 400;
+            margin-left: 2px;
+        }
+
+        .stat-sub {
+            font-size: 11px;
+            color: var(--text-3);
+            margin-top: 6px;
+        }
+
+        /* ===== CARDS ===== */
+        .card {
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+
+        .card-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-2);
+        }
+
+        .card-title {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .card-desc {
+            font-size: 12px;
+            color: var(--text-2);
+            margin-top: 2px;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .card-body+.card-body {
+            border-top: 1px solid var(--border-s);
+        }
+
+        /* ===== FEATURE OVERVIEW TABLE ===== */
+        .feat-table {
+            width: 100%;
+        }
+
+        .feat-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border-s);
+            gap: 12px;
+        }
+
+        .feat-row:last-child {
+            border-bottom: none;
+        }
+
+        .feat-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .feat-name {
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .feat-desc {
+            font-size: 12px;
+            color: var(--text-2);
+            margin-top: 2px;
+        }
+
+        /* ===== TOGGLE ===== */
+        .toggle {
+            width: 42px;
+            height: 22px;
+            background: var(--bg-3);
+            border: 1px solid var(--border);
+            border-radius: 11px;
+            position: relative;
+            cursor: pointer;
+            transition: all var(--tr);
+            flex-shrink: 0;
+        }
+
+        .toggle.on {
+            background: var(--ok);
+            border-color: var(--ok);
+        }
+
+        .toggle::after {
+            content: '';
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: transform var(--tr);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+
+        .toggle.on::after {
+            transform: translateX(20px);
+        }
+
+        .toggle.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* ===== BADGES ===== */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 11.5px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .badge-s {
+            background: var(--ok-m);
+            color: var(--ok);
+        }
+
+        .badge-d {
+            background: var(--err-m);
+            color: var(--err);
+        }
+
+        .badge-w {
+            background: var(--warn-m);
+            color: var(--warn);
+        }
+
+        .badge-i {
+            background: var(--accent-m);
+            color: var(--accent);
+        }
+
+        .badge-n {
+            background: var(--bg-3);
+            color: var(--text-2);
+        }
+
+        /* ===== FORMS ===== */
+        .fg {
+            margin-bottom: 16px;
+        }
+
+        .fg:last-child {
+            margin-bottom: 0;
+        }
+
+        .fl {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-2);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        .fi {
+            width: 100%;
+            padding: 9px 12px;
+            background: var(--bg-2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-1);
+            font-size: 13.5px;
+            transition: border-color var(--tr);
+            outline: none;
+        }
+
+        .fi:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-m);
+        }
+
+        .fi::placeholder {
+            color: var(--text-3);
+        }
+
+        .fi-mono {
+            font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+        }
+
+        .fh {
+            font-size: 12px;
+            color: var(--text-3);
+            margin-top: 5px;
+        }
+
+        .frow {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        /* ===== BUTTONS ===== */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 9px 18px;
+            border-radius: 6px;
+            font-size: 13.5px;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all var(--tr);
+            user-select: none;
+            white-space: nowrap;
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn-p {
+            background: var(--accent-em);
+            color: #fff;
+        }
+
+        .btn-p:hover:not(:disabled) {
+            background: #388bfd;
+        }
+
+        .btn-save {
+            background: var(--bg-3);
+            color: var(--text-1);
+            border: 1px solid var(--border);
+        }
+
+        .btn-save:hover:not(:disabled) {
+            opacity: 0.8;
+        }
+
+        .btn-s {
+            background: var(--bg-2);
+            color: var(--text-1);
+            border-color: var(--border);
+        }
+
+        .btn-s:hover:not(:disabled) {
+            background: var(--bg-3);
+        }
+
+        .btn-d {
+            background: transparent;
+            color: var(--err);
+            border-color: transparent;
+        }
+
+        .btn-d:hover:not(:disabled) {
+            background: var(--err-m);
+        }
+
+        [data-theme='light'] .btn:not(.btn-logout):not(.btn-d) {
+            background: var(--bg-3);
+            color: var(--text-1);
+            border: 1px solid var(--border);
+        }
+
+        [data-theme='light'] .btn:not(.btn-logout):not(.btn-d):hover:not(:disabled) {
+            opacity: 0.8;
+            background: var(--bg-3);
+        }
+
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+
+        /* ===== SYNC STATUS & ANIMATIONS ===== */
+        .btn-syncing { background: var(--accent) !important; cursor: wait !important; }
+        .spinner-small {
+            width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(207, 34, 46, 0.4); background: var(--err); }
+            70% { box-shadow: 0 0 0 10px rgba(207, 34, 46, 0); background: #e02431; }
+            100% { box-shadow: 0 0 0 0 rgba(207, 34, 46, 0); background: var(--err); }
+        }
+        .pulse-red { animation: pulse-red 1.5s infinite; background: var(--err) !important; color: #fff !important; }
+        .sync-status-bar {
+            padding: 10px 20px; font-size: 14px; font-weight: 500;
+            display: flex; align-items: center; justify-content: center;
+            border-bottom: 1px solid var(--border); text-align: center;
+            transition: all var(--tr);
+        }
+        .sync-status-bar.github { color: var(--accent); background: var(--accent-m); border-color: var(--accent); }
+        .sync-status-bar.cloudflare { color: var(--warn); background: var(--warn-m); border-color: var(--warn); }
+        .sync-status-bar.done { color: var(--ok); background: var(--ok-m); border-color: var(--ok); }
+
+        .btn-xs {
+            padding: 3px 8px;
+            font-size: 11px;
+        }
+
+        /* ===== LOGIN OVERLAY ===== */
+        .login-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-canvas);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .login-card {
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 36px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        .login-logo {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .login-card h2 {
+            font-size: 22px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 6px;
+        }
+
+        .login-card p {
+            font-size: 13px;
+            color: var(--text-2);
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .login-btn {
+            width: 100%;
+            justify-content: center;
+            padding: 11px;
+            font-size: 14px;
+        }
+
+        .login-error {
+            background: var(--err-m);
+            color: var(--err);
+            border: 1px solid rgba(248, 81, 73, 0.3);
+            border-radius: 6px;
+            padding: 10px 14px;
+            font-size: 13px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        /* ===== TOAST ===== */
+        .toast {
+            position: fixed;
+            top: 70px;
+            right: 24px;
+            padding: 11px 18px;
+            border-radius: 8px;
+            font-size: 13.5px;
+            font-weight: 500;
+            z-index: 200;
+            transform: translateY(-40px);
+            opacity: 0;
+            transition: all 0.28s cubic-bezier(0.23, 1, 0.32, 1);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+            max-width: 340px;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast-success {
+            background: #1a3a21;
+            color: var(--ok);
+            border: 1px solid rgba(63, 185, 80, 0.3);
+        }
+
+        .toast-error {
+            background: #3a1a1a;
+            color: var(--err);
+            border: 1px solid rgba(248, 81, 73, 0.3);
+        }
+
+        .toast-info {
+            background: #1a2a44;
+            color: var(--accent);
+            border: 1px solid rgba(56, 139, 253, 0.3);
+        }
+
+        /* ===== ALERT ===== */
+        .alert {
+            padding: 11px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .alert-w {
+            background: var(--warn-m);
+            color: var(--warn);
+            border: 1px solid rgba(210, 153, 34, 0.25);
+        }
+
+        .alert-i {
+            background: var(--accent-m);
+            color: var(--accent);
+            border: 1px solid rgba(56, 139, 253, 0.25);
+        }
+
+        .alert code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-size: 11.5px;
+            font-family: monospace;
+        }
+
+        /* ===== LISTS TAB ===== */
+        .list-tabs {
+            display: flex;
+            gap: 2px;
+            margin-bottom: 16px;
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 4px;
+        }
+
+        .list-tab {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 14px;
+            font-size: 12.5px;
+            font-weight: 500;
+            color: var(--text-2);
+            cursor: pointer;
+            border-radius: 5px;
+            transition: all var(--tr);
+            user-select: none;
+            flex: 1;
+            justify-content: center;
+        }
+
+        .list-tab:hover {
+            color: var(--text-1);
+            background: var(--bg-2);
+        }
+
+        .list-tab.active {
+            color: var(--text-1);
+            background: var(--bg-3);
+            font-weight: 600;
+        }
+
+        .list-tab .lt-count {
+            font-size: 10.5px;
+            background: var(--bg-canvas);
+            border-radius: 8px;
+            padding: 1px 5px;
+            font-weight: 700;
+        }
+
+        .list-tab.active .lt-count {
+            background: var(--accent-em);
+            color: #fff;
+        }
+
+        /* Domain input row */
+        .input-row {
+            display: flex;
+            gap: 8px;
+            align-items: flex-start;
+        }
+
+        .input-row .fi {
+            flex: 1;
+        }
+
+        /* Domain list */
+        .domain-list {
+            max-height: 260px;
+            overflow-y: auto;
+        }
+
+        .domain-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 14px;
+            border-bottom: 1px solid var(--border-s);
+            font-size: 12.5px;
+            font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+            gap: 12px;
+        }
+
+        .domain-item:last-child {
+            border-bottom: none;
+        }
+
+        .domain-item:hover {
+            background: var(--bg-2);
+        }
+
+        .domain-item-text {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            word-break: break-all;
+        }
+
+        .domain-remove {
+            background: none;
+            border: none;
+            color: var(--text-3);
+            cursor: pointer;
+            font-size: 14px;
+            padding: 3px 6px;
+            border-radius: 4px;
+            transition: all var(--tr);
+            flex-shrink: 0;
+            line-height: 1;
+        }
+
+        .domain-remove:hover {
+            color: var(--err);
+            background: var(--err-m);
+        }
+
+        .list-empty {
+            padding: 32px 20px;
+            text-align: center;
+            color: var(--text-3);
+            font-size: 13px;
+        }
+
+        .list-empty-icon {
+            font-size: 28px;
+            margin-bottom: 8px;
+            opacity: 0.5;
+        }
+
+        /* Redirect row */
+        .redir-row {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr auto;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .redir-arrow {
+            color: var(--text-3);
+            font-size: 18px;
+            text-align: center;
+        }
+
+        /* Section header inside card */
+        .section-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text-3);
+            margin-bottom: 12px;
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
-        .setup-content {
-            padding: 20px;
+        .section-label::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border-s);
         }
 
-        .setup-list {
-            list-style: none;
+        /* Source info */
+        .source-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
         }
 
-        .setup-list li {
-            margin-bottom: 16px;
-            font-size: 14px;
-            line-height: 1.6;
+        .source-path {
+            font-family: monospace;
+            font-size: 12px;
+            color: var(--text-2);
+            background: var(--bg-2);
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid var(--border-s);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
         }
 
-        .setup-list li strong {
-            color: var(--text);
+        /* Upstream info */
+        .upstream-table {
+            width: 100%;
+            border-collapse: collapse;
         }
 
-        .setup-list a {
-            color: var(--accent);
-            text-decoration: none;
-            font-weight: 500;
+        .upstream-table tr td {
+            padding: 8px 0;
+            font-size: 13px;
+            border-bottom: 1px solid var(--border-s);
+            vertical-align: top;
         }
 
-        .setup-list a:hover {
-            text-decoration: underline;
+        .upstream-table tr:last-child td {
+            border-bottom: none;
         }
 
-        .step-number {
-            display: inline-block;
-            width: 24px;
-            height: 24px;
-            background: var(--border);
-            color: var(--text);
-            border-radius: 50%;
-            text-align: center;
-            line-height: 24px;
+        .upstream-table td:first-child {
+            color: var(--text-3);
+            font-size: 11.5px;
             font-weight: 600;
-            font-size: 12px;
-            margin-right: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            width: 160px;
+            padding-right: 16px;
+            padding-top: 10px;
         }
 
-        /* Footer */
-        footer {
-            margin-top: 60px;
-            padding-top: 20px;
-            border-top: 2px solid var(--border);
-            text-align: center;
-            color: var(--text-muted);
-            font-size: 12px;
-        }
-
-        footer a {
+        .upstream-table td:last-child {
+            font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
             color: var(--accent);
-            text-decoration: none;
-            font-weight: 500;
+            word-break: break-all;
         }
 
-        footer a:hover {
-            text-decoration: underline;
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
         }
 
-        /* Toast */
-        .toast {
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%) translateY(120px);
-            background: var(--text);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 6px;
-            font-weight: 500;
-            font-size: 14px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1);
-            z-index: 1000;
+        ::-webkit-scrollbar-track {
+            background: transparent;
         }
 
-        .toast.show {
-            transform: translateX(-50%) translateY(0);
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-3);
+        }
+
+        /* Divider */
+        .divider {
+            height: 1px;
+            background: var(--border-s);
+            margin: 16px 0;
+        }
+
+        /* No KV code block */
+        .kv-code {
+            background: var(--bg-2);
+            border-radius: 8px;
+            padding: 14px 16px;
+            font-family: monospace;
+            font-size: 12.5px;
+            color: var(--text-2);
+            line-height: 1.8;
+            border: 1px solid var(--border);
+            margin-top: 16px;
         }
 
         /* Responsive */
-        @media (max-width: 640px) {
-            header {
-                flex-direction: column;
-                gap: 16px;
-                text-align: center;
-                margin-bottom: 32px;
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 200px;
             }
 
-            h1 {
-                font-size: 20px;
+            .content-inner {
+                padding: 16px;
             }
 
-            .hero h2 {
-                font-size: 28px;
-            }
-
-            .url-box {
-                flex-direction: column;
-            }
-
-            .copy-btn {
-                width: 100%;
-            }
-
-            .features {
+            .frow {
                 grid-template-columns: 1fr;
             }
+
+            .redir-row {
+                grid-template-columns: 1fr;
+            }
+
+            .redir-arrow {
+                display: none;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .sidebar {
+                display: none;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .list-tabs {
+                flex-wrap: wrap;
+            }
+        }
+        /* Pulsing Save Button */
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); transform: scale(1); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); transform: scale(1.02); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); transform: scale(1); }
+        }
+        .pulse-red {
+            background-color: #ef4444 !important;
+            border-color: #ef4444 !important;
+            animation: pulse-red 2s infinite;
         }
     </style>
 </head>
 
 <body>
-    <div class="container">
-        <header>
-            <div class="brand">
-                <span class="brand-icon">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10" stroke="var(--accent)"></circle>
-                        <line x1="2" y1="12" x2="22" y2="12"></line>
+    <div id="app" v-cloak>
+
+        <!-- SETUP (first run) -->
+        <div v-if="appState==='setup'" class="login-overlay">
+            <div class="login-card">
+                <div class="login-logo">
+                    <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--accent)"
+                        stroke-width="1.5">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="2" y1="12" x2="22" y2="12" />
                         <path
-                            d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z">
-                        </path>
+                            d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
                     </svg>
-                </span>
-                <h1>Serverless Edge DNS Gateway</h1>
-            </div>
-            <a href="https://github.com/bibicadotnet/Serverless-Edge-DNS-Gateway" class="github-btn" target="_blank"
-                aria-label="GitHub">
-                <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
-                    <path
-                        d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z" />
-                </svg>
-            </a>
-        </header>
-
-        <section class="hero">
-            <h2>Secure. Fast. Decentralized.</h2>
-            <p>DNS-over-HTTPS gateway with ad blocking, ECS optimization, geo-bypass, and DNS redirect running on
-                Cloudflare Edge.</p>
-        </section>
-
-        <section class="endpoint-card">
-            <div class="card-header">
-                <span class="status">
-                    <span class="status-dot"></span>
-                    Gateway Operational
-                </span>
-                <span class="card-label">DoH Endpoint</span>
-            </div>
-            <div class="url-box">
-                <div class="url-text" id="endpoint">Loading...</div>
-                <button class="copy-btn" onclick="copyEndpoint(this)" aria-label="Copy"><svg width="18" height="18"
-                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <rect x="9" y="9" width="13" height="13" rx="2" />
-                        <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-                    </svg></button>
-            </div>
-        </section>
-
-        <div class="features">
-            <div class="feature">
-                <h3>🚫 Ad & Tracker Blocking</h3>
-                <p>Blocks ads and trackers using AdGuard, ABPVN, and 1Hosts lists. Auto-updates every hour.</p>
-            </div>
-            <div class="feature">
-                <h3>🌍 ECS – Location Optimization</h3>
-                <p>Sends your network location so CDNs return the closest server for faster page loads.</p>
-            </div>
-            <div class="feature">
-                <h3>🔄 DNS Redirect</h3>
-                <p>Redirect domains to custom CNAME records. Route traffic to a preferred CDN endpoint.</p>
-            </div>
-            <div class="feature">
-                <h3>🛡️ Geo-Bypass</h3>
-                <p>Detects geo-blocked domains and automatically falls back to Mullvad DNS to bypass them.</p>
-            </div>
-            <div class="feature">
-                <h3>⚡ Query Filtering</h3>
-                <p>Drops unnecessary query types (AAAA, PTR, HTTPS) at the edge to reduce upstream load.</p>
-            </div>
-            <div class="feature">
-                <h3>🔐 Private TLD Block</h3>
-                <p>Prevents internal queries like .local, .internal, .test from leaking to the internet.</p>
+                </div>
+                <h2>Gateway Setup</h2>
+                <p>Configure your GitHub repository to store data</p>
+                <div v-if="authError" class="login-error">{{ authError }}</div>
+                
+                <div class="fg"><label class="fl">GitHub Owner</label>
+                    <input class="fi" v-model="regOwner" placeholder="Username or Organization" autofocus @keyup.enter="register"></div>
+                <div class="fg"><label class="fl">GitHub Repository</label>
+                    <input class="fi" v-model="regRepo" placeholder="Repository Name" @keyup.enter="register"></div>
+                <div class="fg">
+                    <label class="fl" style="display:flex; justify-content:space-between">
+                        <span>GitHub PAT (Classic)</span>
+                        <a href="https://github.com/settings/tokens/new" target="_blank" style="text-transform:none; color:var(--accent); text-decoration:none">Create Token</a>
+                    </label>
+                    <input type="password" class="fi" v-model="regPAT" placeholder="ghp_..." @keyup.enter="register" style="margin-bottom:6px">
+                    <div style="font-size:11.5px; color:var(--text-2); line-height:1.4; padding: 6px; background: rgba(0,0,0,0.03); border-radius: 4px;">
+                        ⚠️ <b>Highly Recommended:</b> Use a <b>"Tokens (classic)"</b>. You MUST check the following boxes: 
+                        <br>☑️ <code>repo</code> (Full control of private repositories)
+                        <br>☑️ <code>workflow</code> (Update GitHub Action workflows)
+                    </div>
+                </div>
+                <div class="fg"><label class="fl">Admin Username</label>
+                    <input class="fi" v-model="regUser" placeholder="e.g. admin" @keyup.enter="register"></div>
+                <div class="fg"><label class="fl">Admin Password</label>
+                    <input type="password" class="fi" v-model="regPass" placeholder="Min 6 characters" @keyup.enter="register"></div>
+                <div class="fg"><label class="fl">Confirm Password</label>
+                    <input type="password" class="fi" v-model="regPass2" placeholder="Confirm password" @keyup.enter="register"></div>
+                
+                <button @click="register" class="btn btn-p login-btn">Complete Setup</button>
             </div>
         </div>
 
-        <section>
-            <div class="setup-section">
-                <div class="setup-header">💻 Browser Setup</div>
-                <div class="setup-content">
-                    <ul class="setup-list">
-                        <li><span class="step-number">1</span> Go to <strong>Settings</strong> → Privacy & Security</li>
-                        <li><span class="step-number">2</span> Enable <strong>Secure DNS</strong></li>
-                        <li><span class="step-number">3</span> Choose <strong>Custom</strong> and paste the URL:
-                            <div class="url-box" style="margin-top: 12px; margin-left: 32px;">
-                                <div class="url-text" id="endpoint-browser">https://...</div>
-                                <button class="copy-btn" onclick="copyEndpoint(this)" aria-label="Copy"><svg width="18"
-                                        height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <rect x="9" y="9" width="13" height="13" rx="2" />
-                                        <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-                                    </svg></button>
+        <!-- LOGIN -->
+        <div v-if="appState==='login'" class="login-overlay">
+            <div class="login-card">
+                <div class="login-logo">
+                    <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--accent)"
+                        stroke-width="1.5">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="2" y1="12" x2="22" y2="12" />
+                        <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 014-10z" />
+                    </svg>
+                </div>
+                <h2>DNS Gateway Admin</h2>
+                <p>Sign in to manage your DNS gateway</p>
+                <div v-if="authError" class="login-error">{{ authError }}</div>
+                <div class="fg"><label class="fl">Username</label><input class="fi" v-model="loginUser"
+                        placeholder="Username" autofocus @keyup.enter="login"></div>
+                <div class="fg"><label class="fl">Password</label><input type="password" class="fi" v-model="loginPass"
+                        placeholder="Password" @keyup.enter="login"></div>
+                <button @click="login" class="btn btn-p login-btn">Sign In</button>
+            </div>
+        </div>
+
+        <!-- LOADING -->
+        <div v-if="appState==='loading'" class="login-overlay">
+            <div style="color:var(--text-2);font-size:14px">Loading...</div>
+        </div>
+
+        <!-- MAIN APP -->
+        <div v-if="appState==='admin'" class="app">
+
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="sidebar-brand">
+                    <svg class="sidebar-brand-icon" width="26" height="26" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="1.8">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="2" y1="12" x2="22" y2="12" />
+                        <path
+                            d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
+                    </svg>
+                    <div>
+                        <div class="sidebar-brand-text">DNS Gateway</div>
+                        <div class="sidebar-brand-sub">Edge Admin</div>
+                    </div>
+                </div>
+
+                <nav class="sidebar-nav">
+                    <div class="nav-section">Navigation</div>
+
+                    <div class="nav-item" :class="{active: tab==='dashboard'}" @click="tab='dashboard'">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7" rx="1" />
+                            <rect x="14" y="3" width="7" height="7" rx="1" />
+                            <rect x="3" y="14" width="7" height="7" rx="1" />
+                            <rect x="14" y="14" width="7" height="7" rx="1" />
+                        </svg>
+                        Dashboard
+                    </div>
+
+                    <div class="nav-section">Settings</div>
+
+                    <div class="nav-item" :class="{active: tab==='features'}" @click="tab='features'">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                        </svg>
+                        Features
+                        <span class="nav-badge">{{ activeFeatureCount }}/{{ features.length }}</span>
+                    </div>
+
+                    <div class="nav-item" :class="{active: tab==='filters'}" @click="tab='filters'">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 3H2l8 9.46V19l4 2V12.46L22 3z" />
+                        </svg>
+                        Query Filters
+                        <span class="nav-badge">{{ activeFilterCount }}/{{ filters.length }}</span>
+                    </div>
+
+                    <div class="nav-item" :class="{active: tab==='upstreams'}" @click="tab='upstreams'">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="2" width="20" height="8" rx="2" />
+                            <rect x="2" y="14" width="20" height="8" rx="2" />
+                            <circle cx="6" cy="6" r="1" fill="currentColor" />
+                            <circle cx="6" cy="18" r="1" fill="currentColor" />
+                        </svg>
+                        Upstreams
+                        <span class="nav-badge">{{ config.ECS_INJECTION_ENABLED ? '1/1' : '0/1' }}</span>
+                    </div>
+
+                    <div class="nav-section">Data</div>
+
+                    <div class="nav-item" :class="{active: tab==='lists'}" @click="switchToLists()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                            <line x1="16" y1="13" x2="8" y2="13" />
+                            <line x1="16" y1="17" x2="8" y2="17" />
+                        </svg>
+                        Lists
+                        <span class="nav-badge">{{ totalCustomEntries }}</span>
+                    </div>
+                </nav>
+
+                <div class="sidebar-footer">
+                    <div v-if="adminUsername" class="user-row">
+                        <div class="user-avatar">{{ adminUsername.charAt(0).toUpperCase() }}</div>
+                        <div class="user-name">{{ adminUsername }}</div>
+                    </div>
+                    <button class="btn-logout" @click="logout">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+                            <polyline points="16 17 21 12 16 7" />
+                            <line x1="21" y1="12" x2="9" y2="12" />
+                        </svg>
+                        Sign Out
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Main content -->
+            <div class="main">
+                <header class="topbar">
+                    <h2>{{ tabLabels[tab] }}</h2>
+                    <div class="topbar-right" style="gap: 12px;">
+                        <span v-if="appState === 'admin'" class="badge" :class="syncState === 'idle' ? 'badge-s' : 'badge-w'" style="font-family: monospace; display: flex; align-items: center; gap: 6px;" title="GitHub Status">
+                            <span v-if="syncState !== 'idle' || syncing" class="spinner-small" style="width: 10px; height: 10px; border-width: 1.5px; border-top-color: currentColor;"></span>
+                            <span v-else>⏱</span>
+                            {{ topbarStatus }}
+                        </span>
+
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <button class="btn" @click="toggleTheme" title="Toggle Light/Dark Theme"
+                                style="padding: 4px 8px; background: transparent; border: 1px solid var(--border); color: var(--text-2); border-radius: 6px; font-size: 14px; cursor: pointer;">
+                                {{ theme === 'light' ? '🌙' : '☀️' }}
+                            </button>
+                            
+                            <!-- UNIFIED SAVE & SYNC BUTTON -->
+                            <button @click="hasChanges ? saveAll() : forceSync()" class="btn btn-save" 
+                                :class="{'pulse-red': hasChanges && syncState === 'idle'}" 
+                                :disabled="syncState !== 'idle' || syncing"
+                                :title="hasChanges ? 'Save Changes' : 'Force Sync Lists'"
+                                style="padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                                <svg v-if="!(syncState !== 'idle' || syncing)" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"></path>
+                                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                                    <polyline points="7 3 7 8 15 8"></polyline>
+                                </svg>
+                                <span v-else class="spinner-small" style="width: 14px; height: 14px; border-top-color: currentColor;"></span>
+                            </button>
+                        </div>
+                    </div>
+                </header>
+
+                <div class="content">
+                    <div class="content-inner">
+
+                        <!-- ======= DASHBOARD ======= -->
+                        <div v-if="tab==='dashboard'">
+
+                            <!-- Stats row -->
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <div class="stat-label">Active Features</div>
+                                    <div class="stat-value">{{ activeFeatureCount }}<small>/{{ features.length
+                                            }}</small>
+                                    </div>
+                                    <div class="stat-sub">Core capabilities</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-label">Active Upstreams</div>
+                                    <div class="stat-value">{{ config.ECS_INJECTION_ENABLED ? 1 : 0 }}<small>/1</small>
+                                    </div>
+                                    <div class="stat-sub">ECS capabilities (Upstreams)</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-label">Active Filters</div>
+                                    <div class="stat-value">{{ activeFilterCount }}<small>/{{ filters.length }}</small>
+                                    </div>
+                                    <div class="stat-sub">Query type filters</div>
+                                </div>
+                                <div class="stat-card ok">
+                                    <div class="stat-label">Blocklist</div>
+                                    <div class="stat-value">{{ fmt(stats.blocklistSize || ((lists.blocklist||[]).length)) }}</div>
+                                    <div class="stat-sub">Blocked domains (merged)</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-label">Allowlist</div>
+                                    <div class="stat-value">{{ fmt(stats.allowlistSize || ((lists.allowlist||[]).length)) }}</div>
+                                    <div class="stat-sub">Allowed domains (merged)</div>
+                                </div>
+                                <div class="stat-card err">
+                                    <div class="stat-label">Private TLDs</div>
+                                    <div class="stat-value">{{ fmt((stats.privateTldsSize || 0) + ((lists.private_tlds||[]).length)) }}</div>
+                                    <div class="stat-sub">Internal domains (merged)</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-label">Mullvad</div>
+                                    <div class="stat-value">{{ fmt((stats.mullvadDomainsSize || 0) + ((lists.mullvad_upstream||[]).length)) }}</div>
+                                    <div class="stat-sub">Upstream domains (merged)</div>
+                                </div>
+                                <div class="stat-card warn">
+                                    <div class="stat-label">Redirect Rules</div>
+                                    <div class="stat-value">{{ fmt((stats.redirectRulesSize || 0) + ((lists.redirect_rules||[]).length)) }}</div>
+                                    <div class="stat-sub">CNAME overrides (merged)</div>
+                                </div>
                             </div>
-                        </li>
-                    </ul>
-                </div>
-            </div>
 
-            <div class="setup-section">
-                <div class="setup-header">🍎 Apple (iOS/macOS)</div>
-                <div class="setup-content">
-                    <ul class="setup-list">
-                        <li><span class="step-number">1</span> Open this page in <strong>Safari</strong></li>
-                        <li><span class="step-number">2</span> Download <a href="/apple">.mobileconfig</a> profile and
-                            install</li>
-                        <li><span class="step-number">3</span> Enable in <strong>Settings</strong> → VPN & DNS</li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="setup-section">
-                <div class="setup-header">📱 Android</div>
-                <div class="setup-content">
-                    <ul class="setup-list">
-                        <li><span class="step-number">1</span> Install <a
-                                href="https://play.google.com/store/apps/details?id=app.intra" target="_blank">Intra</a>
-                            app from Play Store</li>
-                        <li><span class="step-number">2</span> Select <strong>Custom server URL</strong></li>
-                        <li><span class="step-number">3</span> Paste the URL and connect:
-                            <div class="url-box" style="margin-top: 12px; margin-left: 32px;">
-                                <div class="url-text" id="endpoint-android">https://...</div>
-                                <button class="copy-btn" onclick="copyEndpoint(this)" aria-label="Copy"><svg width="18"
-                                        height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <rect x="9" y="9" width="13" height="13" rx="2" />
-                                        <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-                                    </svg></button>
+                            <!-- Feature status table -->
+                            <div class="card">
+                                <div class="card-head">
+                                    <div>
+                                        <div class="card-title">Feature Status</div>
+                                        <div class="card-desc">All toggleable features and filters at a glance</div>
+                                    </div>
+                                    <span class="badge badge-i">{{ activeCount }}/{{ totalCount }} active</span>
+                                </div>
+                                <div class="feat-table">
+                                    <div v-for="f in allFeatures" :key="f.key" class="feat-row">
+                                        <div class="feat-info">
+                                            <div class="feat-name">{{ f.label }}</div>
+                                            <div class="feat-desc">{{ f.desc }}</div>
+                                        </div>
+                                        <span class="badge" :class="config[f.key] ? 'badge-s' : 'badge-n'">
+                                            {{ config[f.key] ? '● ON' : '○ OFF' }}
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </section>
 
-        <footer>
-            Powered by <a href="https://pages.cloudflare.com">Cloudflare Pages</a> • Created by <a
-                href="https://bibica.net/">bibica.net</a>
-        </footer>
-    </div>
+                            <!-- Upstream summary -->
+                            <div class="card">
+                                <div class="card-head">
+                                    <div>
+                                        <div class="card-title">DNS Upstreams</div>
+                                        <div class="card-desc">Resolver endpoints and timeout settings</div>
+                                    </div>
+                                    <span class="badge badge-i">{{ config.ECS_INJECTION_ENABLED ? 1 : 0 }}/1
+                                        active</span>
+                                </div>
+                                <div class="card-body">
+                                    <table class="upstream-table">
+                                        <tr>
+                                            <td>Primary</td>
+                                            <td>{{ config.UPSTREAM_PRIMARY || '—' }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Fallback</td>
+                                            <td>{{ config.UPSTREAM_FALLBACK || '—' }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Geo-Bypass</td>
+                                            <td>{{ config.UPSTREAM_GEO_BYPASS || '—' }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Timeout</td>
+                                            <td>{{ config.UPSTREAM_TIMEOUT }}ms</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Refresh Interval</td>
+                                            <td>{{ Math.round((config.ALL_LISTS_REFRESH_INTERVAL||3600000)/60000) }} min
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
 
-    <div class="toast" id="toast">Copied to clipboard!</div>
+                        </div>
+
+                        <!-- ======= FEATURES ======= -->
+                        <div v-if="tab==='features'">
+                            <div class="card">
+                                <div class="card-head">
+                                    <div>
+                                        <div class="card-title">Core Features</div>
+                                        <div class="card-desc">Enable or disable major DNS gateway capabilities</div>
+                                    </div>
+                                    <span class="badge badge-i">{{ activeFeatureCount }}/{{ features.length }}
+                                        active</span>
+                                </div>
+                                <div class="feat-table">
+                                    <div v-for="f in features" :key="f.key" class="feat-row">
+                                        <div class="feat-info">
+                                            <div class="feat-name">{{ f.label }}</div>
+                                            <div class="feat-desc">{{ f.desc }}</div>
+                                        </div>
+                                        <div class="toggle" :class="{on: config[f.key], disabled: saving}"
+                                            @click="toggleFeature(f.key)">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ======= QUERY FILTERS ======= -->
+                        <div v-if="tab==='filters'">
+                            <div class="card">
+                                <div class="card-head">
+                                    <div>
+                                        <div class="card-title">Blocked Query Types</div>
+                                        <div class="card-desc">Block specific DNS record types at the edge before
+                                            upstream
+                                            forwarding</div>
+                                    </div>
+                                    <span class="badge badge-i">{{ activeFilterCount }}/{{ filters.length }}
+                                        active</span>
+                                </div>
+                                <div class="feat-table">
+                                    <div v-for="f in filters" :key="f.key" class="feat-row">
+                                        <div class="feat-info">
+                                            <div class="feat-name">{{ f.label }}</div>
+                                            <div class="feat-desc">{{ f.desc }}</div>
+                                        </div>
+                                        <div class="toggle" :class="{on: config[f.key], disabled: saving}"
+                                            @click="toggleFeature(f.key)">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ======= UPSTREAMS ======= -->
+                        <div v-if="tab==='upstreams'">
+                            <div class="card">
+                                <div class="card-head">
+                                    <div class="card-title">DNS Upstream Servers</div>
+                                    <span class="badge badge-i">{{ config.ECS_INJECTION_ENABLED ? 1 : 0 }}/1
+                                        active</span>
+                                </div>
+                                <div class="card-body">
+                                    <div class="fg"><label class="fl">Primary Upstream</label><input class="fi fi-mono"
+                                            v-model="config.UPSTREAM_PRIMARY">
+                                        <div class="fh">Main DNS-over-HTTPS resolver (DoH)</div>
+                                    </div>
+                                    <div class="fg"><label class="fl">Fallback Upstream</label><input class="fi fi-mono"
+                                            v-model="config.UPSTREAM_FALLBACK">
+                                        <div class="fh">Used when primary times out or fails</div>
+                                    </div>
+                                    <div class="fg"><label class="fl">Geo-Bypass Upstream</label><input
+                                            class="fi fi-mono" v-model="config.UPSTREAM_GEO_BYPASS">
+                                        <div class="fh">Re-resolve without ECS for geo-blocked domains returning
+                                            loopback
+                                        </div>
+                                    </div>
+                                    <div class="frow">
+                                        <div class="fg">
+                                            <label class="fl">Timeout (ms)</label>
+                                            <input class="fi" type="number" v-model.number="config.UPSTREAM_TIMEOUT">
+                                        </div>
+                                        <div class="fg">
+                                            <label class="fl">List Refresh Interval (ms)</label>
+                                            <input class="fi" type="number"
+                                                v-model.number="config.ALL_LISTS_REFRESH_INTERVAL">
+                                            <div class="fh">= {{
+                                                Math.round((config.ALL_LISTS_REFRESH_INTERVAL||3600000)/60000) }}
+                                                minutes
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-head">
+                                    <div class="card-title">ECS (EDNS Client Subnet)</div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="feat-row"
+                                        style="padding: 0 0 16px 0; border-bottom: 1px solid var(--border-s); margin-bottom: 16px;">
+                                        <div class="feat-info">
+                                            <div class="feat-name">Enable ECS Injection</div>
+                                            <div class="feat-desc">Inject EDNS Client Subnet for CDN geo-optimization
+                                            </div>
+                                        </div>
+                                        <div class="toggle"
+                                            :class="{on: config.ECS_INJECTION_ENABLED, disabled: saving}"
+                                            @click="toggleFeature('ECS_INJECTION_ENABLED')"></div>
+                                    </div>
+                                    <div class="frow">
+                                        <div class="fg">
+                                            <label class="fl">IPv4 Prefix Length</label>
+                                            <input class="fi" type="number" v-model.number="config.ECS_PREFIX_V4"
+                                                min="1" max="32">
+                                            <div class="fh">/{{ config.ECS_PREFIX_V4 || 24 }} mask sent to upstream
+                                            </div>
+                                        </div>
+                                        <div class="fg">
+                                            <label class="fl">IPv6 Prefix Length</label>
+                                            <input class="fi" type="number" v-model.number="config.ECS_PREFIX_V6"
+                                                min="1" max="128">
+                                            <div class="fh">/{{ config.ECS_PREFIX_V6 || 48 }} mask sent to upstream
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="display: flex; justify-content: space-between; margin-top: 15px;">
+                                <button @click="saveUpstreams" class="btn btn-save" style="opacity: 0.6; pointer-events: none;">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
+                                        <polyline points="17 21 17 13 7 13 7 21" />
+                                        <polyline points="7 3 7 8 15 8" />
+                                    </svg>
+                                    Changes Staged Locally
+                                </button>
+                                <button @click="resetUpstreams" class="btn btn-s">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                                        <path d="M3 3v5h5" />
+                                    </svg>
+                                    Reset to Defaults
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- ======= LISTS ======= -->
+                        <div v-if="tab==='lists'">
+
+                            <!-- Tab selector -->
+                            <div class="list-tabs">
+                                <div class="list-tab" :class="{active: listTab==='blocklist'}"
+                                    @click="listTab='blocklist'">
+                                    🚫 Blocklist
+                                    <span class="lt-count">{{ (lists.blocklist||[]).length +
+                                        (customUrls.blocklist||[]).length }}</span>
+                                </div>
+                                <div class="list-tab" :class="{active: listTab==='allowlist'}"
+                                    @click="listTab='allowlist'">
+                                    ✅ Allowlist
+                                    <span class="lt-count">{{ (lists.allowlist||[]).length +
+                                        (customUrls.allowlist||[]).length }}</span>
+                                </div>
+                                <div class="list-tab" :class="{active: listTab==='redirect_rules'}"
+                                    @click="listTab='redirect_rules'">
+                                    ↪ Redirect
+                                    <span class="lt-count">{{ (lists.redirect_rules||[]).length }}</span>
+                                </div>
+                                <div class="list-tab" :class="{active: listTab==='private_tlds'}"
+                                    @click="listTab='private_tlds'">
+                                    🔒 Private TLDs
+                                    <span class="lt-count">{{ (lists.private_tlds||[]).length }}</span>
+                                </div>
+                                <div class="list-tab" :class="{active: listTab==='mullvad_upstream'}"
+                                    @click="listTab='mullvad_upstream'">
+                                    🌐 Mullvad
+                                    <span class="lt-count">{{ (lists.mullvad_upstream||[]).length }}</span>
+                                </div>
+                            </div>
+
+                            <div v-if="listsLoading" class="list-empty" style="margin-top: 40px">
+                                <div class="list-empty-icon">⏳</div>
+                                Loading lists...
+                            </div>
+                            <div v-else>
+                                <!-- REDIRECT RULES TAB -->
+                                <!-- SHARED RAW TEXT EDITOR -->
+                                <div class="card">
+                                    <div class="card-head">
+                                        <div>
+                                            <div class="card-title">Custom {{ listTabLabels[listTab] || 'Rules' }}</div>
+                                            <div class="card-desc"
+                                                v-if="listTab==='blocklist' || listTab==='allowlist'">Matches domains
+                                                exactly. Comments starting with # or ! are ignored.</div>
+                                            <div class="card-desc" v-else-if="listTab==='private_tlds'">Block internal
+                                                domains or routers (e.g. "local" blocks domain.local). Uses raw text
+                                                lines, so dots are not strictly required.</div>
+                                            <div class="card-desc" v-else-if="listTab==='mullvad_upstream'">Anonymous
+                                                routing (no ECS) for specific domains (e.g. Github routes better via
+                                                Mullvad than Google/CF).</div>
+                                            <div class="card-desc" v-else-if="listTab==='redirect_rules'">Custom DNS
+                                                redirect/rewrite (CNAME overrides) — helps overcome network blocks by
+                                                rewriting target domains.</div>
+                                        </div>
+                                        <span class="badge badge-d">{{ (lists[listTab]||[]).length }} active
+                                            entries</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <div
+                                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                                            <div class="section-label" style="margin-bottom:0;">Raw Text Editor</div>
+                                            <button class="btn btn-save" @click="saveListText">
+                                                Update List Locally
+                                            </button>
+                                        </div>
+                                        <div class="input-row" style="margin-bottom:16px;">
+                                            <textarea class="fi fi-mono" v-model="currentRawText"
+                                                :placeholder="textPlaceholders[listTab]"
+                                                rows="12"
+                                                style="resize: vertical; white-space: pre; overflow-x: auto; box-sizing: border-box; width: 100%; font-size: 13px; line-height: 1.6; padding: 12px;"></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div v-if="listTab==='redirect_rules'">
+                                    <!-- Static source -->
+                                    <div class="card">
+                                        <div class="card-head">
+                                            <div class="card-title">Static File Source</div>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="source-info">
+                                                <span class="source-path">{{ config.REDIRECT_RULES_URL }}</span>
+                                                <span class="badge badge-i">{{ fmt((stats.redirectRulesSize || 0) + ((lists.redirect_rules||[]).length)) }} total
+                                                    (merged)</span>
+                                            </div>
+                                            <div class="fh" style="margin-top:10px">Static file + custom rules above are
+                                                merged
+                                                at runtime.</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- External URL Subscriptions & Static Info (blocklist, allowlist, etc) -->
+                                <div v-else>
+
+                                    <!-- External URL Subscriptions (blocklist/allowlist only) -->
+                                    <div v-if="listTab==='blocklist' || listTab==='allowlist'" class="card">
+                                        <div class="card-head">
+                                            <div>
+                                                <div class="card-title">External {{ listTabLabels[listTab] }} URLs</div>
+                                                <div class="card-desc">Subscribe to remote blocklists — AdBlock, hosts
+                                                    file, and
+                                                    plain domain formats are supported. Comments starting with # are
+                                                    ignored.</div>
+                                            </div>
+                                            <span class="badge badge-i">{{ (customUrls[listTab]||[]).length }}
+                                                subscriptions</span>
+                                        </div>
+                                        <div class="card-body">
+                                            <div
+                                                style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                                                <div class="section-label" style="margin-bottom:0;">Raw Text Editor
+                                                    (URLs)</div>
+                                                <button class="btn btn-save" @click="saveUrlText">
+                                                    Update URLs Locally
+                                                </button>
+                                            </div>
+                                            <div class="input-row" style="margin-bottom:16px;">
+                                                <textarea class="fi fi-mono" v-model="currentRawUrlText"
+                                                    :placeholder="urlPlaceholders[listTab]"
+                                                    rows="5"
+                                                    style="resize: vertical; white-space: pre; overflow-x: auto; box-sizing: border-box; width: 100%; font-size: 13px; line-height: 1.6; padding: 12px;"></textarea>
+                                            </div>
+                                            <div class="fh" style="margin-top:10px; text-align: center;">Domains are
+                                                auto-cleaned
+                                                (AdBlock/hosts/plain formats). Fetched and merged on next list refresh.
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Static source info -->
+                                    <div class="card">
+                                        <div class="card-head">
+                                            <div class="card-title">Static File Source</div>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="source-info">
+                                                <span class="source-path">{{ listTab==='blocklist' ?
+                                                    config.BLOCKLIST_URL :
+                                                    listTab==='allowlist' ? config.ALLOWLIST_URL :
+                                                    listTab==='private_tlds' ?
+                                                    config.PRIVATE_TLD_URL : config.MULLVAD_UPSTREAM_URL }}</span>
+                                                <span class="badge badge-i">
+                                                    {{ listTab==='blocklist' ? fmt(stats.blocklistSize || ((lists.blocklist||[]).length)) :
+                                                    listTab==='allowlist' ? fmt(stats.allowlistSize || ((lists.allowlist||[]).length)) : 
+                                                    listTab==='private_tlds' ? fmt((stats.privateTldsSize || 0) + ((lists.private_tlds||[]).length)) : 
+                                                    fmt((stats.mullvadDomainsSize || 0) + ((lists.mullvad_upstream||[]).length)) }} total (merged)
+                                                </span>
+                                            </div>
+                                            <div class="fh" style="margin-top:10px">Static file + external URLs + custom
+                                                domains
+                                                above are all merged at runtime.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div> <!-- close listsLoading else -->
+                        </div>
+
+                    </div><!-- /content-inner -->
+                </div><!-- /content -->
+            </div><!-- /main -->
+        </div><!-- /app -->
+
+        <!-- Toast -->
+        <div class="toast" :class="[toastMsg ? 'show' : '', 'toast-' + toastType]">{{ toastMsg }}</div>
+
+    </div><!-- /#app -->
 
     <script>
-        const host = window.location.host;
-        const url = `https://${host}/dns-query`;
+        const { createApp, ref, computed, onMounted, onUnmounted, watch } = Vue;
+        createApp({
+            setup() {
+                const appState = ref('loading');
+                const hasChanges = ref(false);
+                const theme = ref(localStorage.getItem('dnsadm_theme') || 'light');
+                watch(theme, (newVal) => {
+                    document.documentElement.setAttribute('data-theme', newVal);
+                    localStorage.setItem('dnsadm_theme', newVal);
+                }, { immediate: true });
+                const toggleTheme = () => {
+                    theme.value = theme.value === 'light' ? 'dark' : 'light';
+                };
+                const tab = ref('dashboard');
+                const token = ref(localStorage.getItem('dnsadm_token') || '');
+                const adminUsername = ref('');
 
-        document.getElementById('endpoint').textContent = url;
-        document.getElementById('endpoint-browser').textContent = url;
-        document.getElementById('endpoint-android').textContent = url;
+                // Auth
+                const loginUser = ref(''); const loginPass = ref('');
+                const regOwner = ref(''); const regRepo = ref(''); const regPAT = ref(''); const regUser = ref(''); const regPass = ref(''); const regPass2 = ref('');
+                const authError = ref('');
 
-        function copyEndpoint(btn) {
-            navigator.clipboard.writeText(url).then(() => {
-                const toast = document.getElementById('toast');
-                toast.classList.add('show');
+                // Data
+                const config = ref({});
+                const stats = ref({});
+                const syncState = ref('idle'); 
+                const syncMsg = ref('');
+                const lists = ref({});
+                const listTab = ref('blocklist');
+                const customUrls = ref({});
+                const saving = ref(false);
+                const listsLoading = ref(false);
+                const syncing = ref(false);
+                const currentRawText = ref('');
+                const currentRawUrlText = ref('');
+                const newUrl = ref('');
+                const savingUrl = ref(false);
+                const savingList = ref(false);
+                
+                // Edge Status Polling
+                const latestCommitSha = ref('');
+                const liveEdgeTime = ref('');
+                const lastKnownEdgeTime = ref('');
+                let edgePollTimer = null;
+                
+                const topbarStatus = computed(() => {
+                    if (syncState.value === 'github') return 'Pushing to GitHub...';
+                    if (syncState.value === 'cloudflare') return 'Deploying to Cloudflare...';
+                    if (syncing.value) return 'Syncing Lists...';
+                    if (latestCommitSha.value) {
+                        let str = `GitHub: ${latestCommitSha.value}`;
+                        if (liveEdgeTime.value && liveEdgeTime.value !== 'never') {
+                            str += ` (${timeAgo(liveEdgeTime.value)})`;
+                        }
+                        return str;
+                    }
+                    return 'GitHub Status: Unknown';
+                });
 
-                const originalIcon = btn.innerHTML;
-                btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 11"/></svg>`;
-                btn.classList.add('copied');
+                // Toast
+                const toastMsg = ref(''); const toastType = ref('success');
+                const showToast = (m, t = 'success') => {
+                    toastMsg.value = m; toastType.value = t;
+                    setTimeout(() => toastMsg.value = '', 3200);
+                };
 
-                setTimeout(() => {
-                    toast.classList.remove('show');
-                    btn.innerHTML = originalIcon;
-                    btn.classList.remove('copied');
-                }, 2000);
-            });
-        }
+                const sysTime = ref(Date.now());
+                let sysTimer = setInterval(() => sysTime.value = Date.now(), 60000);
+                onUnmounted(() => clearInterval(sysTimer));
+
+                // Auto-detect changes deeply against initial state
+                let initDone = false;
+                const initialSnapshot = ref('');
+                watch([config, lists, customUrls], () => {
+                   if (!initDone) return;
+                   const current = JSON.stringify({ c: config.value, cd: lists.value, u: customUrls.value });
+                   hasChanges.value = (current !== initialSnapshot.value);
+                }, { deep: true });
+
+                const fmt = n => n ? Number(n).toLocaleString() : '0';
+                const timeAgo = iso => {
+                    const _ = sysTime.value; // Force Vue reactivity ticker
+                    const d = Date.now() - new Date(iso).getTime();
+                    if (d < 60000) return 'Just now';
+                    if (d < 3600000) return Math.floor(d / 60000) + 'm ago';
+                    if (d < 86400000) return Math.floor(d / 3600000) + 'h ago';
+                    return Math.floor(d / 86400000) + 'd ago';
+                };
+
+                const tabLabels = {
+                    dashboard: 'Dashboard',
+                    features: 'Features',
+                    filters: 'Query Filters',
+                    upstreams: 'Upstreams',
+                    lists: 'Lists Management'
+                };
+                const listTabLabels = {
+                    blocklist: 'Blocklist',
+                    allowlist: 'Allowlist',
+                    redirect_rules: 'Redirect Rules',
+                    private_tlds: 'Private TLDs',
+                    mullvad_upstream: 'Mullvad Upstream'
+                };
+
+                const textPlaceholders = {
+                    blocklist: '# Example config with comments\n# Tracking servers\nads.example.com\napi.tracker.com',
+                    allowlist: '# Allowed domains (ignores blocklist)\nanalytics.mycompany.com\nsale.event.com',
+                    redirect_rules: '# Custom DNS redirect/rewrite (CNAME overrides)\n# Format: source target\n\nwww.bilibili.tv www.bilibili.tv.w.cdngslb.com\nmedium.com rocket.net',
+                    private_tlds: '# Block internal domains or routers (Suffix match)\nlocal\ninternal\n192.168.1.1',
+                    mullvad_upstream: '# Route specific domains via Mullvad (Anonymous routing)\ngithub.com\napi.github.com'
+                };
+
+                const urlPlaceholders = {
+                    blocklist: '# Subscribe to remote blocklists (Format: One URL per line)\nhttps://raw.githubusercontent.com/StevenBlack/hosts/master/hosts\nhttps://s3.amazonaws.com/lists/ads.txt',
+                    allowlist: '# Subscribe to remote allowlists (Format: One URL per line)\nhttps://raw.githubusercontent.com/anudeepND/whitelist/master/domains/whitelist.txt'
+                };
+
+                const features = [
+                    { key: 'AD_BLOCK_ENABLED', label: 'Ad & Tracker Blocking', desc: 'Block ads/trackers using community-maintained blocklists' },
+                    { key: 'BLOCK_PRIVATE_TLD', label: 'Block Private TLDs', desc: 'Block internal domains (.local, .internal, routers)' },
+                    { key: 'DNS_REDIRECT_ENABLED', label: 'DNS Redirect', desc: 'Redirect domains to custom CNAME targets' },
+                    { key: 'MULLVAD_UPSTREAM_ENABLED', label: 'Mullvad Upstream', desc: 'Route specific domains through Mullvad DNS' },
+                    { key: 'DEBUG_ENABLED', label: 'Debug Endpoint', desc: 'Enable /debug diagnostics endpoint' },
+                ];
+                const otherFeatures = [
+                    { key: 'ECS_INJECTION_ENABLED', label: 'ECS Injection', desc: 'Inject EDNS Client Subnet for CDN geo-optimization' }
+                ];
+                const filters = [
+                    { key: 'BLOCK_ANY', label: 'Block ANY (TYPE 255)', desc: 'Block ANY queries — DNS amplification attack vector' },
+                    { key: 'BLOCK_AAAA', label: 'Block AAAA (TYPE 28)', desc: 'Block IPv6 address queries' },
+                    { key: 'BLOCK_PTR', label: 'Block PTR (TYPE 12)', desc: 'Block reverse DNS lookups' },
+                    { key: 'BLOCK_HTTPS', label: 'Block HTTPS (TYPE 65)', desc: 'Block HTTPS/SVCB record queries' },
+                ];
+
+                const allFeatures = computed(() => [...features, ...otherFeatures, ...filters]);
+                const activeFeatureCount = computed(() => features.filter(f => config.value[f.key]).length);
+                const activeFilterCount = computed(() => filters.filter(f => config.value[f.key]).length);
+                const activeCount = computed(() => allFeatures.value.filter(f => config.value[f.key]).length);
+                const totalCount = computed(() => allFeatures.value.length);
+                const totalCustomEntries = computed(() => {
+                    const l = lists.value;
+                    const u = customUrls.value;
+                    return (l.blocklist || []).length + (l.allowlist || []).length +
+                        (l.redirect_rules || []).length + (l.private_tlds || []).length +
+                        (l.mullvad_upstream || []).length +
+                        (u.blocklist || []).length + (u.allowlist || []).length;
+                });
+
+// ===== GITHUB API & ENCRYPTION =====
+                const GITHUB_OWNER = ref(localStorage.getItem('dnsadm_owner') || '');
+                const GITHUB_REPO = ref(localStorage.getItem('dnsadm_repo') || '');
+                let sessionPAT = '';
+
+                const getSha = async (path) => {
+                    const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/contents/${path}`, {
+                        headers: { 'Authorization': `Bearer ${sessionPAT}` }
+                    });
+                    if (res.ok) {
+                        const d = await res.json();
+                        return d.sha;
+                    }
+                    if (res.status !== 404) {
+                        const err = await res.json().catch(()=>({}));
+                        throw new Error(`getSha Error: ${err.message || res.statusText}`);
+                    }
+                    return null;
+                };
+
+                const githubPut = async (path, contentStr) => {
+                    if (!sessionPAT) throw new Error('Not logged in');
+                    const sha = await getSha(path);
+                    const encoded = btoa(unescape(encodeURIComponent(contentStr)));
+                    const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/contents/${path}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${sessionPAT}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            message: `Update ${path} via Admin UI`,
+                            content: encoded,
+                            sha: sha || undefined
+                        })
+                    });
+                    if (!res.ok) {
+                        const err = await res.json().catch(()=>({}));
+                        throw new Error(`Github API: ${err.message || res.statusText}`);
+                    }
+                    return res;
+                };
+
+                const githubGet = async (path) => {
+                    const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/contents/${path}?t=${Date.now()}`, {
+                        headers: { 'Authorization': `Bearer ${sessionPAT}` },
+                        cache: 'no-store'
+                    });
+                    if(res.ok) {
+                        const d = await res.json();
+                        return JSON.parse(decodeURIComponent(escape(atob(d.content))));
+                    }
+                    return null;
+                };
+
+                // Crypto utilities
+                const deriveKey = async (password) => {
+                    const enc = new TextEncoder();
+                    const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), {name: 'PBKDF2'}, false, ['deriveKey']);
+                    return crypto.subtle.deriveKey(
+                        {name: 'PBKDF2', salt: enc.encode('DNS-GW-SALT'), iterations: 100000, hash: 'SHA-256'},
+                        keyMaterial, {name: 'AES-GCM', length: 256}, false, ['encrypt', 'decrypt']
+                    );
+                };
+
+                const aesEncrypt = async (text, password) => {
+                    const key = await deriveKey(password);
+                    const iv = crypto.getRandomValues(new Uint8Array(12));
+                    const enc = new TextEncoder();
+                    const cipher = await crypto.subtle.encrypt({name: 'AES-GCM', iv}, key, enc.encode(text));
+                    const combined = new Uint8Array(iv.length + cipher.byteLength);
+                    combined.set(iv, 0); combined.set(new Uint8Array(cipher), iv.length);
+                    return btoa(String.fromCharCode.apply(null, combined));
+                };
+
+                const aesDecrypt = async (b64, password) => {
+                    try {
+                        const key = await deriveKey(password);
+                        const raw = atob(b64);
+                        const combined = new Uint8Array(raw.length);
+                        for(let i=0; i<raw.length; i++) combined[i] = raw.charCodeAt(i);
+                        const iv = combined.slice(0, 12);
+                        const cipher = combined.slice(12);
+                        const plain = await crypto.subtle.decrypt({name: 'AES-GCM', iv}, key, cipher);
+                        return new TextDecoder().decode(plain);
+                    } catch { return null; }
+                };
+                const register = async () => {
+                    if (regPass.value !== regPass2.value) { authError.value = 'Passwords do not match'; return; }
+                    if (!regPAT.value || regPAT.value.length < 10) { authError.value = 'Invalid PAT'; return; }
+                    if (!regOwner.value || !regRepo.value) { authError.value = 'Missing GitHub Owner or Repo'; return; }
+                    if (!regUser.value || regUser.value.length < 2) { authError.value = 'Missing Admin Username'; return; }
+                    
+                    try {
+                        sessionPAT = regPAT.value;
+                        GITHUB_OWNER.value = regOwner.value.trim();
+                        GITHUB_REPO.value = regRepo.value.trim();
+
+                        // Detect if account already exists on GitHub
+                        showToast('Checking GitHub for existing account...', 'info');
+                        const existing = await githubGet('database/admin_user.json');
+                        if (existing && !existing.needsSetup) {
+                            showToast('Account already exists for this repository! Switching to login.', 'info');
+                            localStorage.setItem('dnsadm_owner', GITHUB_OWNER.value);
+                            localStorage.setItem('dnsadm_repo', GITHUB_REPO.value);
+                            appState.value = 'login';
+                            return;
+                        }
+
+                        const encrypted = await aesEncrypt(regPAT.value, regPass.value);
+                        const userObj = { 
+                            needsSetup: false, 
+                            username: regUser.value.trim(), 
+                            owner: GITHUB_OWNER.value,
+                            repo: GITHUB_REPO.value,
+                            encrypted_pat: encrypted 
+                        };
+                        await githubPut('database/admin_user.json', JSON.stringify(userObj, null, 2));
+
+                        sessionStorage.setItem('dnsadm_pat', sessionPAT);
+                        sessionStorage.setItem('dnsadm_user', userObj.username);
+                        localStorage.setItem('dnsadm_owner', GITHUB_OWNER.value);
+                        localStorage.setItem('dnsadm_repo', GITHUB_REPO.value);
+
+                        appState.value = 'admin'; showToast('Setup successful!');
+                        await loadConfig();
+                    } catch(e) { authError.value = 'Registration failed: ' + e.message; }
+                };
+
+                const login = async () => {
+                    authError.value = '';
+                    try {
+                        // 1. Fetch user info from LOCAL SERVER (no PAT needed)
+                        const res = await fetch(`/database/admin_user.json?t=${Date.now()}`);
+                        if (!res.ok) { authError.value = 'Admin account not found on server'; return; }
+                        const u = await res.json();
+                        
+                        if (!u || u.needsSetup) { appState.value = 'setup'; return; }
+                        if (loginUser.value.trim() !== u.username) { authError.value = 'Invalid username or password'; return; }
+                        
+                        // 2. Decrypt PAT with provided password
+                        const pat = await aesDecrypt(u.encrypted_pat, loginPass.value);
+                        if(pat) {
+                            sessionPAT = pat; 
+                            adminUsername.value = u.username;
+                            GITHUB_OWNER.value = u.owner;
+                            GITHUB_REPO.value = u.repo;
+
+                            sessionStorage.setItem('dnsadm_pat', pat);
+                            sessionStorage.setItem('dnsadm_user', u.username);
+                            localStorage.setItem('dnsadm_owner', u.owner);
+                            localStorage.setItem('dnsadm_repo', u.repo);
+
+                            appState.value = 'admin'; showToast('Login successful!');
+                            await loadConfig();
+                        } else { 
+                            authError.value = 'Invalid password'; 
+                        }
+                    } catch(e) { 
+                        authError.value = 'Login failed: ' + e.message; 
+                    }
+                };
+
+                const logout = () => { 
+                    sessionPAT = ''; 
+                    sessionStorage.removeItem('dnsadm_pat');
+                    sessionStorage.removeItem('dnsadm_user');
+                    appState.value = 'login'; 
+                };
+
+                // ===== CONFIG =====
+                const loadConfig = async (skipEdgeCheck = false) => {
+                    try {
+                        const [c, cd, u, s] = await Promise.all([
+                            githubGet('database/dns_gateway_config.json'),
+                            githubGet('database/custom_domains.json'),
+                            githubGet('database/custom_urls.json'),
+                            githubGet('database/stats.json')
+                        ]);
+                        if(c) config.value = c;
+                        if(cd) lists.value = cd;
+                        if(u) customUrls.value = u;
+                        stats.value = s || { lastFetch: new Date().toISOString() };
+                        
+                        initialSnapshot.value = JSON.stringify({ c: config.value, cd: lists.value, u: customUrls.value });
+                        // Mark init as done so we can start watching for changes
+                        setTimeout(() => { initDone = true; hasChanges.value = false; }, 500);
+
+                        if (!skipEdgeCheck) {
+                            await checkEdgeStatus(true);
+                        }
+                    } catch(e) { showToast('Load config failed', 'error'); }
+                };
+
+                const updateConfig = (updates) => {
+                    config.value = { ...config.value, ...updates };
+                    hasChanges.value = true;
+                    showToast('Settings staged locally', 'info');
+                };
+
+                const toggleFeature = k => updateConfig({ [k]: !config.value[k] });
+                const saveUpstreams = () => updateConfig({ UPSTREAM_PRIMARY: config.value.UPSTREAM_PRIMARY, UPSTREAM_FALLBACK: config.value.UPSTREAM_FALLBACK, UPSTREAM_GEO_BYPASS: config.value.UPSTREAM_GEO_BYPASS, UPSTREAM_TIMEOUT: parseInt(config.value.UPSTREAM_TIMEOUT)||5000, ECS_PREFIX_V4: parseInt(config.value.ECS_PREFIX_V4)||24, ECS_PREFIX_V6: parseInt(config.value.ECS_PREFIX_V6)||48, ALL_LISTS_REFRESH_INTERVAL: parseInt(config.value.ALL_LISTS_REFRESH_INTERVAL)||3600000 });
+                const resetUpstreams = () => { config.value.UPSTREAM_PRIMARY = 'https://bu0eg1tdzu.cloudflare-gateway.com/dns-query'; config.value.UPSTREAM_FALLBACK = 'https://rhpcv957tj.cloudflare-gateway.com/dns-query'; config.value.UPSTREAM_GEO_BYPASS = 'https://dns.mullvad.net/dns-query'; config.value.UPSTREAM_TIMEOUT=5000; config.value.ECS_PREFIX_V4=24; config.value.ECS_PREFIX_V6=48; config.value.ALL_LISTS_REFRESH_INTERVAL=3600000; showToast('Reset to defaults! Click save.', 'info'); };
+
+                // ===== LISTS =====
+                const reloadCurrentRawText = () => {
+                   const lt = listTab.value;
+                   if(['blocklist','allowlist'].includes(lt)) {
+                      currentRawUrlText.value = customUrls.value[lt+'_text'] || (customUrls.value[lt] ? customUrls.value[lt].join('\n') : '');
+                      currentRawText.value = lists.value[lt] ? lists.value[lt].join('\n') : '';
+                   } else {
+                      if(!lists.value[lt]) currentRawText.value = '';
+                      else if(lt === 'redirect_rules') currentRawText.value = lists.value[lt].map(r => `${r.source} ${r.target}`).join('\n');
+                      else currentRawText.value = lists.value[lt].join('\n');
+                   }
+                };
+                watch(listTab, reloadCurrentRawText);
+
+                const switchToLists = () => { tab.value = 'lists'; reloadCurrentRawText(); };
+
+                const saveUrlText = () => {
+                    const lines = currentRawUrlText.value.split('\n').map(l=>l.trim()).filter(l=>l && !l.startsWith('#'));
+                    customUrls.value[listTab.value] = lines;
+                    customUrls.value[listTab.value + '_text'] = currentRawUrlText.value;
+                    showToast('Staged URLs changes', 'info');
+                };
+
+                const saveListText = () => {
+                    const lines = currentRawText.value.split('\n').map(l=>l.trim()).filter(l=>l && !l.startsWith('#'));
+                    if(listTab.value === 'redirect_rules') {
+                        lists.value[listTab.value] = lines.map(l=>{ const p=l.split(/\s+/); return {source:p[0], target:p[1]}; }).filter(x=>x.source&&x.target);
+                    } else { lists.value[listTab.value] = lines; }
+                    showToast('Staged list changes', 'info');
+                };
+
+                // ===== LIVE SYNC POLLING =====
+                const checkEdgeStatus = async (updateGithubCommit = false) => {
+                    if (updateGithubCommit) {
+                        try {
+                            const refRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/git/refs/heads/main`, { headers: { 'Authorization': `Bearer ${sessionPAT}` } });
+                            if (refRes.ok) {
+                                const refData = await refRes.json();
+                                if (refData.object && refData.object.sha) {
+                                    latestCommitSha.value = refData.object.sha.substring(0, 7);
+                                }
+                            }
+                        } catch(e){}
+                    }
+
+                    try {
+                        const res = await fetch(`/database/dns_gateway_config.json?v=${Date.now()}`, { method: 'HEAD' });
+                        if (res.ok) {
+                            const lm = res.headers.get('last-modified');
+                            if (lm) {
+                                liveEdgeTime.value = new Date(lm).toISOString();
+                                
+                                const newTime = new Date(lm).getTime();
+                                const oldTime = lastKnownEdgeTime.value ? new Date(lastKnownEdgeTime.value).getTime() : 0;
+                                
+                                if (oldTime > 0 && newTime > oldTime && syncState.value === 'idle' && !hasChanges.value) {
+                                    showToast('Edge deployed a new version. Reloading UI...', 'info');
+                                    await loadConfig(true);
+                                }
+                                lastKnownEdgeTime.value = lm;
+                            }
+                        }
+                    } catch(e){}
+                };
+
+                const pollCloudflareSync = async (snapshot) => {
+                    const maxAttempts = 60; // Up to 60 seconds
+                    let attempts = 0;
+                    while (attempts < maxAttempts) {
+                        try {
+                            const res = await fetch(`/database/dns_gateway_config.json?v=${Date.now()}`, { cache: 'no-store' });
+                            const d = await res.json();
+                            if (d && d._updated === snapshot) {
+                                return true;
+                            }
+                        } catch (e) { }
+                        await new Promise(r => setTimeout(r, 1000));
+                        attempts++;
+                    }
+                    return false;
+                };
+
+                const waitForCommitSuccess = async (sha) => {
+                    let attempts = 0;
+                    while (attempts < 60) {
+                        try {
+                            const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/commits/${sha}/status`, { headers: { 'Authorization': `Bearer ${sessionPAT}` } });
+                            if (res.ok) {
+                                const data = await res.json();
+                                if (data.state === 'success') return true;
+                                if (data.state === 'failure' || data.state === 'error') return false;
+                            }
+                        } catch (e) { }
+                        await new Promise(r => setTimeout(r, 2000));
+                        attempts++;
+                    }
+                    return false;
+                };
+
+                const getLatestWorkflowRun = async () => {
+                    try {
+                        const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/actions/runs?event=workflow_dispatch`, { headers: { 'Authorization': `Bearer ${sessionPAT}` } });
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.workflow_runs && data.workflow_runs.length > 0) return data.workflow_runs[0].id;
+                        }
+                    } catch (e) { }
+                    return 0;
+                };
+
+                const waitForWorkflowCompletion = async (prevRunId) => {
+                    let currentRunId = 0;
+                    for (let i = 0; i < 20; i++) {
+                        await new Promise(r => setTimeout(r, 3000));
+                        try {
+                            const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/actions/runs?event=workflow_dispatch`, { headers: { 'Authorization': `Bearer ${sessionPAT}` } });
+                            if (res.ok) {
+                                const data = await res.json();
+                                if (data.workflow_runs && data.workflow_runs.length > 0 && data.workflow_runs[0].id > prevRunId) {
+                                    currentRunId = data.workflow_runs[0].id;
+                                    break;
+                                }
+                            }
+                        } catch(e) {}
+                    }
+                    if (!currentRunId) return false;
+                    for (let i = 0; i < 60; i++) {
+                        await new Promise(r => setTimeout(r, 3000));
+                        try {
+                            const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/actions/runs/${currentRunId}`, { headers: { 'Authorization': `Bearer ${sessionPAT}` } });
+                            if (res.ok) {
+                                const data = await res.json();
+                                if (data.status === 'completed') return data.conclusion === 'success';
+                            }
+                        } catch(e) {}
+                    }
+                    return false;
+                };
+
+                // ===== BATCH SAVE (TREES API) =====
+                const saveAll = async () => {
+                    syncState.value = 'github';
+                    syncMsg.value = 'Pushing bundle to GitHub...';
+                    showToast('Starting Sync...', 'info');
+                    
+                    try {
+                        const timeMs = Date.now();
+                        config.value._updated = timeMs;
+
+                        // 1. Get current commit SHA
+                        const refUrl = `https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/git/matching-refs/heads/main`;
+                        const refRes = await fetch(refUrl, { headers: { 'Authorization': `Bearer ${sessionPAT}` } });
+                        if (!refRes.ok) throw new Error(`Failed to get base ref: ${refRes.statusText}`);
+                        const refs = await refRes.json();
+                        if (!refs.length) throw new Error('Branch "main" not found');
+                        const baseSha = refs[0].object.sha;
+
+                        // 2. Create Tree
+                        const files = [
+                            { path: 'database/dns_gateway_config.json', content: JSON.stringify(config.value, null, 2) },
+                            { path: 'database/custom_domains.json', content: JSON.stringify(lists.value, null, 2) },
+                            { path: 'database/custom_urls.json', content: JSON.stringify(customUrls.value, null, 2) }
+                        ];
+                        const treeItems = files.map(f => ({
+                            path: f.path,
+                            mode: '100644',
+                            type: 'blob',
+                            content: f.content
+                        }));
+
+                        const treeRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/git/trees`, {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${sessionPAT}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ base_tree: baseSha, tree: treeItems })
+                        });
+                        if (!treeRes.ok) throw new Error(`Failed to create tree: ${treeRes.statusText}`);
+                        const newTree = await treeRes.json();
+
+                        // 3. Create Commit
+                        const commitRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/git/commits`, {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${sessionPAT}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ message: 'Sync changes via Admin Batch Save', tree: newTree.sha, parents: [baseSha] })
+                        });
+                        if (!commitRes.ok) throw new Error(`Failed to create commit: ${commitRes.statusText}`);
+                        const newCommit = await commitRes.json();
+
+                        // 4. Update Ref
+                        const patchRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/git/refs/heads/main`, {
+                            method: 'PATCH',
+                            headers: { 'Authorization': `Bearer ${sessionPAT}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ sha: newCommit.sha })
+                        });
+                        if (!patchRes.ok) throw new Error(`Failed to update branch: ${patchRes.statusText}`);
+
+                        // 5. Monitor Cloudflare Sync fully before triggering workflow
+                        syncState.value = 'cloudflare';
+                        syncMsg.value = 'Waiting for Cloudflare Deployment (1/2)...';
+                        showToast('Saved to Github! Waiting for Cloudflare deployment (1/2)...', 'info', 10000);
+                        const edgeSynced = await pollCloudflareSync(timeMs);
+                        
+                        if (!edgeSynced) {
+                            showToast('Timeout waiting for Deploy! Aborting orchestration.', 'error');
+                            syncing.value = false;
+                            syncState.value = 'idle';
+                            return;
+                        }
+
+                        // Step 2. Trigger Action
+                        syncState.value = 'github';
+                        syncMsg.value = 'Triggering Github Workflow...';
+                        const oldRunId = await getLatestWorkflowRun();
+                        showToast('Deploy 1 Success! Triggering Github workflow...', 'success', 5000);
+                        const dispatched = await forceSync(true);
+                        if (!dispatched) {
+                            syncing.value = false;
+                            syncState.value = 'idle';
+                            return;
+                        }
+
+                        // Step 3. Wait for Action completion
+                        syncMsg.value = 'Workflow generating Blocklists...';
+                        showToast('Workflow running... Generating Blocklists...', 'info', 30000);
+                        const wfSuccess = await waitForWorkflowCompletion(oldRunId);
+                        if (!wfSuccess) {
+                            showToast('Workflow deployment failed or timed out!', 'error');
+                            syncing.value = false;
+                            syncState.value = 'idle';
+                            return;
+                        }
+
+                        // Check if Action pushed a new commit
+                        let finalSha = newCommit.sha;
+                        try {
+                             const refRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/git/refs/heads/main`, { headers: { 'Authorization': `Bearer ${sessionPAT}` } });
+                             if(refRes.ok) {
+                                  const ref = await refRes.json();
+                                  finalSha = ref.object.sha;
+                             }
+                        } catch(e) {}
+
+                        if (finalSha !== newCommit.sha) {
+                             syncState.value = 'cloudflare';
+                             syncMsg.value = 'Waiting for final Cloudflare Edge Deployment (2/2)...';
+                             showToast('Blocklists generated! Waiting for final Cloudflare deployment (2/2)...', 'info', 15000);
+                             const deploy2 = await waitForCommitSuccess(finalSha);
+                             if (!deploy2) {
+                                  showToast('Timeout waiting for Final Deploy!', 'error');
+                                  syncing.value = false;
+                                  syncState.value = 'idle';
+                                  return;
+                             }
+                        }
+
+                        showToast('All Tasks Completed Successfully! Reloading Dashboard...', 'success', 5000);
+                        await loadConfig();
+                        hasChanges.value = false;
+                        syncState.value = 'idle';
+                        syncing.value = false;
+                    } catch(e) {
+                        syncState.value = 'idle';
+                        syncMsg.value = '';
+                        showToast('Sync Error: ' + e.message, 'error');
+                        console.error(e);
+                        syncing.value = false;
+                    }
+                };
+
+                const forceSync = async (calledInternally = false) => {
+                    if (!calledInternally) syncing.value = true;
+                    try {
+                        let workflowId = 'Update_DNS_Blocklists.yml';
+                        try {
+                            const resWf = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/actions/workflows`, { headers: { 'Authorization': `Bearer ${sessionPAT}` } });
+                            if (resWf.ok) {
+                                const d = await resWf.json();
+                                const wf = d.workflows?.find(w => w.name.includes('Update DNS Blocklists') || w.path.includes('Update_DNS_Blocklists.yml'));
+                                if (wf) workflowId = wf.id;
+                            }
+                        } catch(e){
+                            showToast('Workflow Fail: Token missing "workflow" scope or Action not found!', 'error');
+                            if (!calledInternally) setTimeout(() => { syncing.value = false; }, 3000);
+                            return false;
+                        }
+
+                        const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/actions/workflows/${workflowId}/dispatches`, {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${sessionPAT}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ ref: 'main' })
+                        });
+                        if(res.ok) {
+                            if (!calledInternally) {
+                                showToast('Workflow manually started! Syncing in background.', 'success');
+                                setTimeout(() => { syncing.value = false; }, 3000);
+                            }
+                            return true;
+                        } else {
+                            const err = await res.json().catch(()=>({}));
+                            let msg = err.message || res.statusText;
+                            if (res.status === 404 || res.status === 403) msg += ' (Hint: Missing PAT `workflow` scope!)';
+                            showToast('Workflow Fail: ' + msg, 'error');
+                        }
+                    } catch(e) { showToast('Sync Err: ' + e.message, 'error'); }
+                    if (!calledInternally) setTimeout(() => { syncing.value = false; }, 3000);
+                    return false;
+                };
+
+                // ===== INIT =====
+                onMounted(async () => {
+                    edgePollTimer = setInterval(() => checkEdgeStatus(false), 30000);
+                    
+                    // 1. Restore Session (for F5 persistence)
+                    const savedPAT = sessionStorage.getItem('dnsadm_pat');
+                    const savedUser = sessionStorage.getItem('dnsadm_user');
+                    if (savedPAT && savedUser) {
+                        sessionPAT = savedPAT;
+                        adminUsername.value = savedUser;
+                    }
+
+                    // 2. Fetch admin status from LOCAL SERVER (The Standard)
+                    try {
+                        const res = await fetch(`/database/admin_user.json?t=${Date.now()}`);
+                        if (res.ok) {
+                            const u = await res.json();
+                            if (u && !u.needsSetup) {
+                                GITHUB_OWNER.value = u.owner;
+                                GITHUB_REPO.value = u.repo;
+                                if (sessionPAT) {
+                                    appState.value = 'admin';
+                                    await loadConfig();
+                                } else {
+                                    appState.value = 'login';
+                                }
+                                return;
+                            }
+                        }
+                        appState.value = 'setup';
+                    } catch(e) {
+                         appState.value = 'setup';
+                    }
+                });
+
+                onUnmounted(() => {
+                    if (edgePollTimer) clearInterval(edgePollTimer);
+                });
+
+                return {
+                    appState, tab, adminUsername, config, stats, hasChanges, syncState, syncMsg,
+                    loginUser, loginPass, regOwner, regRepo, regPAT, regUser, regPass, regPass2, authError,
+                    lists, listTab, customUrls, currentRawText, currentRawUrlText, newUrl,
+                    saving, savingUrl, savingList, syncing, listsLoading, toastMsg, toastType,
+                    tabLabels, listTabLabels, textPlaceholders, urlPlaceholders,
+                    features, filters, allFeatures,
+                    activeFeatureCount, activeFilterCount, activeCount, totalCount, totalCustomEntries,
+                    register, login, logout, toggleFeature, saveUpstreams, resetUpstreams,
+                    switchToLists, saveListText, saveUrlText, forceSync, saveAll,
+                    fmt, timeAgo, showToast, theme, toggleTheme, topbarStatus
+                };
+            }
+        }).mount('#app');
     </script>
 </body>
 
