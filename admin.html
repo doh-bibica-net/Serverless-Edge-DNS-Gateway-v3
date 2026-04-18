@@ -1110,7 +1110,9 @@
                     </label>
                     <input type="password" class="fi" v-model="regPAT" placeholder="ghp_... or github_pat_..." @keyup.enter="register">
                 </div>
-                <div class="fg"><label class="fl">Management Password</label>
+                <div class="fg"><label class="fl">Admin Username</label>
+                    <input class="fi" v-model="regUser" placeholder="e.g. admin" @keyup.enter="register"></div>
+                <div class="fg"><label class="fl">Admin Password</label>
                     <input type="password" class="fi" v-model="regPass" placeholder="Min 6 characters" @keyup.enter="register"></div>
                 <div class="fg"><label class="fl">Confirm Password</label>
                     <input type="password" class="fi" v-model="regPass2" placeholder="Confirm password" @keyup.enter="register"></div>
@@ -1744,7 +1746,7 @@
 
                 // Auth
                 const loginUser = ref(''); const loginPass = ref('');
-                const regOwner = ref(''); const regRepo = ref(''); const regPAT = ref(''); const regPass = ref(''); const regPass2 = ref('');
+                const regOwner = ref(''); const regRepo = ref(''); const regPAT = ref(''); const regUser = ref(''); const regPass = ref(''); const regPass2 = ref('');
                 const authError = ref('');
 
                 // Data
@@ -1922,6 +1924,7 @@
                     if (regPass.value !== regPass2.value) { authError.value = 'Passwords do not match'; return; }
                     if (!regPAT.value || regPAT.value.length < 10) { authError.value = 'Invalid PAT'; return; }
                     if (!regOwner.value || !regRepo.value) { authError.value = 'Missing GitHub Owner or Repo'; return; }
+                    if (!regUser.value || regUser.value.length < 2) { authError.value = 'Missing Admin Username'; return; }
                     try {
                         sessionPAT = regPAT.value;
                         GITHUB_OWNER.value = regOwner.value.trim();
@@ -1930,7 +1933,7 @@
                         const encrypted = await aesEncrypt(regPAT.value, regPass.value);
                         const userObj = { 
                             needsSetup: false, 
-                            username: "admin", 
+                            username: regUser.value.trim(), 
                             owner: GITHUB_OWNER.value,
                             repo: GITHUB_REPO.value,
                             encrypted_pat: encrypted 
@@ -1949,6 +1952,7 @@
                     try {
                         const u = await githubGet('database/admin_user.json');
                         if (!u || u.needsSetup) { appState.value = 'setup'; return; }
+                        if (loginUser.value.trim() !== u.username) { authError.value = 'Invalid username or password'; return; }
                         const pat = await aesDecrypt(u.encrypted_pat, loginPass.value);
                         if(pat) {
                             sessionPAT = pat; appState.value = 'admin'; showToast('Login successful!');
@@ -2077,7 +2081,7 @@
 
                 return {
                     appState, tab, token, adminUsername, config, stats,
-                    loginUser, loginPass, regOwner, regRepo, regPAT, regPass, regPass2, authError,
+                    loginUser, loginPass, regOwner, regRepo, regPAT, regUser, regPass, regPass2, authError,
                     lists, listTab, customUrls, currentRawText, currentRawUrlText, newUrl,
                     saving, savingUrl, savingList, syncing, listsLoading, toastMsg, toastType,
                     tabLabels, listTabLabels, textPlaceholders, urlPlaceholders,
