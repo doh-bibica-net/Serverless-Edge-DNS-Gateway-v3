@@ -1668,13 +1668,13 @@
                                                 <div class="section-label" style="margin-bottom:0;">Raw Text Editor
                                                     (URLs)</div>
                                                 <button class="btn btn-save" @click="saveUrlText"
-                                                    :disabled="!stats.hasKV || savingUrl">
-                                                    {{ savingUrl ? 'Saving...' : 'Save & Fetch URLs' }}
+                                                    :disabled="savingUrl">
+                                                    Update URLs Locally
                                                 </button>
                                             </div>
                                             <div class="input-row" style="margin-bottom:16px;">
                                                 <textarea class="fi fi-mono" v-model="currentRawUrlText"
-                                                    :placeholder="urlPlaceholders[listTab]" :disabled="!stats.hasKV"
+                                                    :placeholder="urlPlaceholders[listTab]"
                                                     rows="5"
                                                     style="resize: vertical; white-space: pre; overflow-x: auto; box-sizing: border-box; width: 100%; font-size: 13px; line-height: 1.6; padding: 12px;"></textarea>
                                             </div>
@@ -1886,8 +1886,14 @@
                 };
 
                 const githubGet = async (path) => {
-                    const res = await fetch(`https://raw.githubusercontent.com/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/main/${path}?t=${Date.now()}`);
-                    if(res.ok) return await res.json();
+                    const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/contents/${path}?t=${Date.now()}`, {
+                        headers: { 'Authorization': `Bearer ${sessionPAT}` },
+                        cache: 'no-store'
+                    });
+                    if(res.ok) {
+                        const d = await res.json();
+                        return JSON.parse(decodeURIComponent(escape(atob(d.content))));
+                    }
                     return null;
                 };
 
@@ -2088,8 +2094,8 @@
                         hasChanges.value = false;
                         showToast('Saved & Commited!', 'success');
                         
-                        // 5. Trigger Workflow
-                        await forceSync();
+                        // 5. Trigger Workflow (with 1.5s delay to let GitHub catch up)
+                        setTimeout(forceSync, 1500);
                     } catch(e) {
                          showToast('Batch Save failed: ' + e.message, 'error');
                     } finally {
@@ -2107,7 +2113,10 @@
                             body: JSON.stringify({ ref: 'main' })
                         });
                         if(res.ok) showToast('Syncing workflow started!');
-                        else showToast('Failed to trigger workflow', 'error');
+                        else {
+                            const err = await res.json().catch(()=>({}));
+                            showToast('Workflow Fail: ' + (err.message || res.statusText), 'error');
+                        }
                     } catch(e) { showToast('Sync Err: ' + e.message, 'error'); }
                     finally { syncing.value = false; }
                 };
