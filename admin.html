@@ -650,6 +650,29 @@
             font-size: 12px;
         }
 
+        /* ===== SYNC STATUS & ANIMATIONS ===== */
+        .btn-syncing { background: var(--accent) !important; cursor: wait !important; }
+        .spinner-small {
+            width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(207, 34, 46, 0.4); background: var(--err); }
+            70% { box-shadow: 0 0 0 10px rgba(207, 34, 46, 0); background: #e02431; }
+            100% { box-shadow: 0 0 0 0 rgba(207, 34, 46, 0); background: var(--err); }
+        }
+        .pulse-red { animation: pulse-red 1.5s infinite; background: var(--err) !important; color: #fff !important; }
+        .sync-status-bar {
+            padding: 10px 20px; font-size: 14px; font-weight: 500;
+            display: flex; align-items: center; justify-content: center;
+            border-bottom: 1px solid var(--border); text-align: center;
+            transition: all var(--tr);
+        }
+        .sync-status-bar.github { color: var(--accent); background: var(--accent-m); border-color: var(--accent); }
+        .sync-status-bar.cloudflare { color: var(--warn); background: var(--warn-m); border-color: var(--warn); }
+        .sync-status-bar.done { color: var(--ok); background: var(--ok-m); border-color: var(--ok); }
+
         .btn-xs {
             padding: 3px 8px;
             font-size: 11px;
@@ -1272,19 +1295,35 @@
                             </button>
                             
                             <!-- BATCH SAVE BUTTON -->
-                            <button v-if="hasChanges" @click="saveAll" class="btn pulse-red" :disabled="syncing"
-                                title="Save All Changes to GitHub"
-                                style="padding: 6px 14px; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer;">
-                                {{ syncing ? 'Saving...' : 'Save & Sync' }}
+                            <button v-if="hasChanges || syncState !== 'idle'" @click="saveAll" 
+                                class="btn" :class="{'pulse-red': hasChanges && syncState === 'idle', 'btn-syncing': syncState !== 'idle'}" 
+                                :disabled="syncState !== 'idle'"
+                                title="Sync Status"
+                                style="padding: 6px 14px; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                                <template v-if="syncState === 'github'">
+                                    <span class="spinner-small"></span> GitHub...
+                                </template>
+                                <template v-else-if="syncState === 'cloudflare'">
+                                    <span class="spinner-small"></span> Cloudflare...
+                                </template>
+                                <template v-else>
+                                    {{ hasChanges ? 'Save & Sync' : 'Synced' }}
+                                </template>
                             </button>
                             <button v-else @click="forceSync" class="btn" :disabled="syncing"
-                                title="Sync Lists"
+                                title="Force Sync Lists"
                                 style="padding: 4px 8px; background: transparent; border: 1px solid var(--border); color: var(--text-2); border-radius: 6px; font-size: 14px; cursor: pointer;">
-                                {{ syncing ? '⏳' : '🔄' }}
+                                🔄
                             </button>
                         </div>
                     </div>
                 </header>
+                
+                <!-- SYNC STATUS BAR -->
+                <div v-if="syncState !== 'idle'" class="sync-status-bar" :class="syncState">
+                    <span v-if="syncState!=='done'" class="spinner-small" style="margin-right: 12px; border-top-color: currentColor;"></span>
+                    {{ syncMsg }}
+                </div>
 
                 <div class="content">
                     <div class="content-inner">
@@ -1750,6 +1789,9 @@
                 // Data
                 const config = ref({});
                 const stats = ref({});
+                const hasChanges = ref(false);
+                const syncState = ref('idle'); 
+                const syncMsg = ref('');
                 const lists = ref({});
                 const listTab = ref('blocklist');
                 const customUrls = ref({});
@@ -2078,11 +2120,52 @@
                     showToast('Staged list changes', 'info');
                 };
 
+                // ===== LIVE SYNC POLLING =====
+                const pollCloudflareSync = async (targetCfg) => {
+                    syncState.value = 'cloudflare';
+                    syncMsg.value = 'Commit success! Waiting for Cloudflare Pages deployment...';
+                    
+                    let attempts = 0;
+                    const maxAttempts = 30; // 90 seconds
+                    
+                    while (attempts < maxAttempts) {
+                        try {
+                            // Fetch public config with cache buster
+                            const res = await fetch(`${window.location.origin}/database/dns_gateway_config.json?v=${Date.now()}`, { cache: 'no-store' });
+                            if (res.ok) {
+                                const live = await res.json();
+                                // Compare key fields (simplified equality check for config)
+                                if (JSON.stringify(live) === JSON.stringify(targetCfg)) {
+                                    syncState.value = 'idle';
+                                    syncMsg.value = '';
+                                    hasChanges.value = false;
+                                    showToast('Full Sync Complete (Live on Edge)!', 'success');
+                                    // Final reload to ensure data consistency
+                                    await loadConfig();
+                                    return;
+                                }
+                            }
+                        } catch (e) { console.warn("Polling error:", e); }
+                        
+                        attempts++;
+                        syncMsg.value = `GitHub synced. Waiting for Cloudflare (${attempts}/${maxAttempts})...`;
+                        await new Promise(r => setTimeout(r, 3000));
+                    }
+                    
+                    syncState.value = 'idle';
+                    showToast('Sync timeout - check Cloudflare dashboard', 'warning');
+                };
+
                 // ===== BATCH SAVE (TREES API) =====
                 const saveAll = async () => {
-                    syncing.value = true;
-                    showToast('Bundling changes...', 'info');
+                    syncState.value = 'github';
+                    syncMsg.value = 'Pushing bundle to GitHub...';
+                    showToast('Starting Sync...', 'info');
+                    
                     try {
+                        // Capture snapshot of current config to verify against later
+                        const snapshot = JSON.parse(JSON.stringify(config.value));
+
                         // 1. Get current commit SHA
                         const refUrl = `https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/git/matching-refs/heads/main`;
                         const refRes = await fetch(refUrl, { headers: { 'Authorization': `Bearer ${sessionPAT}` } });
@@ -2129,16 +2212,17 @@
                         });
                         if (!patchRes.ok) throw new Error(`Failed to update branch: ${patchRes.statusText}`);
 
-                        hasChanges.value = false;
-                        showToast('Saved & Committed!', 'success');
-                        
-                        // 5. Trigger Workflow
-                        setTimeout(forceSync, 1500);
+                        // 5. Trigger Workflow (List generation)
+                        forceSync(); 
+
+                        // 6. Enter Cloudflare Sync Monitoring
+                        await pollCloudflareSync(snapshot);
+
                     } catch(e) {
-                         showToast('Batch Save failed: ' + e.message, 'error');
+                         syncState.value = 'idle';
+                         syncMsg.value = '';
+                         showToast('Sync Error: ' + e.message, 'error');
                          console.error(e);
-                    } finally {
-                        syncing.value = false;
                     }
                 };
 
