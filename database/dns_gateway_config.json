@@ -1,0 +1,19 @@
+{
+  "UPSTREAM_PRIMARY": "https://bu0eg1tdzu.cloudflare-gateway.com/dns-query",
+  "UPSTREAM_FALLBACK": "https://rhpcv957tj.cloudflare-gateway.com/dns-query",
+  "UPSTREAM_GEO_BYPASS": "https://dns.mullvad.net/dns-query",
+  "UPSTREAM_TIMEOUT": 5000,
+  "ALL_LISTS_REFRESH_INTERVAL": 3600000,
+  "AD_BLOCK_ENABLED": true,
+  "ECS_INJECTION_ENABLED": true,
+  "ECS_PREFIX_V4": 24,
+  "ECS_PREFIX_V6": 48,
+  "BLOCK_ANY": true,
+  "BLOCK_AAAA": true,
+  "BLOCK_PTR": true,
+  "BLOCK_HTTPS": true,
+  "BLOCK_PRIVATE_TLD": true,
+  "DNS_REDIRECT_ENABLED": true,
+  "MULLVAD_UPSTREAM_ENABLED": true,
+  "DEBUG_ENABLED": false
+}
