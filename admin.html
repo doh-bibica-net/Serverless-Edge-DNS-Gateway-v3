@@ -2258,23 +2258,6 @@
                     return false;
                 };
 
-                const waitForCommitSuccess = async (sha) => {
-                    let attempts = 0;
-                    while (attempts < 60) {
-                        try {
-                            const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/commits/${sha}/status`, { headers: { 'Authorization': `Bearer ${sessionPAT}` } });
-                            if (res.ok) {
-                                const data = await res.json();
-                                if (data.state === 'success') return true;
-                                if (data.state === 'failure' || data.state === 'error') return false;
-                            }
-                        } catch (e) { }
-                        await new Promise(r => setTimeout(r, 2000));
-                        attempts++;
-                    }
-                    return false;
-                };
-
                 const getLatestWorkflowRun = async () => {
                     try {
                         const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/actions/runs?event=workflow_dispatch`, { headers: { 'Authorization': `Bearer ${sessionPAT}` } });
