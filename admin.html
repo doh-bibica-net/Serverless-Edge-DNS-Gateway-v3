@@ -2072,7 +2072,7 @@
                         if(c) config.value = c;
                         if(cd) lists.value = cd;
                         if(u) customUrls.value = u;
-                        stats.value = { lastSync: new Date().toISOString() };
+                        stats.value = { lastFetch: new Date().toISOString() };
                         
                         // Mark init as done so we can start watching for changes
                         setTimeout(() => { initDone = true; hasChanges.value = false; }, 500);
@@ -2281,7 +2281,7 @@
                 });
 
                 return {
-                    appState, tab, token, adminUsername, config, stats, hasChanges,
+                    appState, tab, adminUsername, config, stats, hasChanges, syncState, syncMsg,
                     loginUser, loginPass, regOwner, regRepo, regPAT, regUser, regPass, regPass2, authError,
                     lists, listTab, customUrls, currentRawText, currentRawUrlText, newUrl,
                     saving, savingUrl, savingList, syncing, listsLoading, toastMsg, toastType,
