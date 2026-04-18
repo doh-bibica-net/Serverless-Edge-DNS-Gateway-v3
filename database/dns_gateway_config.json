@@ -8,7 +8,7 @@
   "ECS_INJECTION_ENABLED": true,
   "ECS_PREFIX_V4": 24,
   "ECS_PREFIX_V6": 48,
-  "BLOCK_ANY": true,
+  "BLOCK_ANY": false,
   "BLOCK_AAAA": true,
   "BLOCK_PTR": true,
   "BLOCK_HTTPS": true,
