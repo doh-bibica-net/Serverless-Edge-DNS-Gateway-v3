@@ -11,7 +11,7 @@
   "BLOCK_ANY": false,
   "BLOCK_AAAA": false,
   "BLOCK_PTR": false,
-  "BLOCK_HTTPS": true,
+  "BLOCK_HTTPS": false,
   "BLOCK_PRIVATE_TLD": false,
   "DNS_REDIRECT_ENABLED": false,
   "MULLVAD_UPSTREAM_ENABLED": false,
