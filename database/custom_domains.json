@@ -1,5 +1,8 @@
 {
   "redirect_rules": [],
   "private_tlds": [],
-  "mullvad_upstream": []
+  "mullvad_upstream": [],
+  "blocklist": [
+    "baomoi.com"
+  ]
 }
