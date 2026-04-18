@@ -1662,7 +1662,7 @@
                                         <div class="card-body">
                                             <div class="source-info">
                                                 <span class="source-path">{{ config.REDIRECT_RULES_URL }}</span>
-                                                <span class="badge badge-i">{{ stats.redirectRulesSize || 0 }} total
+                                                <span class="badge badge-i">{{ fmt(stats.redirectRulesSize || ((lists.redirect_rules||[]).length)) }} total
                                                     (merged)</span>
                                             </div>
                                             <div class="fh" style="margin-top:10px">Static file + custom rules above are
