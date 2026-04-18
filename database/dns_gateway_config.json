@@ -15,6 +15,5 @@
   "BLOCK_PRIVATE_TLD": true,
   "DNS_REDIRECT_ENABLED": true,
   "MULLVAD_UPSTREAM_ENABLED": true,
-  "DEBUG_ENABLED": false,
   "_updated": 1776515108099
 }
