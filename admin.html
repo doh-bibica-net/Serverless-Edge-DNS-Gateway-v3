@@ -1283,7 +1283,7 @@
                 <header class="topbar">
                     <h2>{{ tabLabels[tab] }}</h2>
                     <div class="topbar-right" style="gap: 12px;">
-                        <span v-if="appState === 'admin'" class="badge" :class="syncState === 'idle' ? 'badge-n' : 'badge-w'" style="font-family: monospace; display: flex; align-items: center; gap: 6px;" title="Edge Status">
+                        <span v-if="appState === 'admin'" class="badge" :class="syncState === 'idle' ? 'badge-s' : 'badge-w'" style="font-family: monospace; display: flex; align-items: center; gap: 6px;" title="GitHub Status">
                             <span v-if="syncState !== 'idle' || syncing" class="spinner-small" style="width: 10px; height: 10px; border-width: 1.5px; border-top-color: currentColor;"></span>
                             <span v-else>⏱</span>
                             {{ topbarStatus }}
@@ -1341,27 +1341,27 @@
                                 </div>
                                 <div class="stat-card ok">
                                     <div class="stat-label">Blocklist</div>
-                                    <div class="stat-value">{{ fmt(stats.blocklistSize) }}</div>
+                                    <div class="stat-value">{{ fmt(stats.blocklistSize || ((lists.blocklist||[]).length)) }}</div>
                                     <div class="stat-sub">Blocked domains (merged)</div>
                                 </div>
                                 <div class="stat-card">
                                     <div class="stat-label">Allowlist</div>
-                                    <div class="stat-value">{{ fmt(stats.allowlistSize) }}</div>
+                                    <div class="stat-value">{{ fmt(stats.allowlistSize || ((lists.allowlist||[]).length)) }}</div>
                                     <div class="stat-sub">Allowed domains (merged)</div>
                                 </div>
                                 <div class="stat-card err">
                                     <div class="stat-label">Private TLDs</div>
-                                    <div class="stat-value">{{ fmt(stats.privateTldsSize) }}</div>
+                                    <div class="stat-value">{{ fmt(stats.privateTldsSize || ((lists.private_tlds||[]).length)) }}</div>
                                     <div class="stat-sub">Internal domains (merged)</div>
                                 </div>
                                 <div class="stat-card">
                                     <div class="stat-label">Mullvad</div>
-                                    <div class="stat-value">{{ stats.mullvadDomainsSize || 0 }}</div>
+                                    <div class="stat-value">{{ fmt(stats.mullvadDomainsSize || ((lists.mullvad_upstream||[]).length)) }}</div>
                                     <div class="stat-sub">Upstream domains (merged)</div>
                                 </div>
                                 <div class="stat-card warn">
                                     <div class="stat-label">Redirect Rules</div>
-                                    <div class="stat-value">{{ stats.redirectRulesSize || 0 }}</div>
+                                    <div class="stat-value">{{ fmt(stats.redirectRulesSize || ((lists.redirect_rules||[]).length)) }}</div>
                                     <div class="stat-sub">CNAME overrides (merged)</div>
                                 </div>
                             </div>
@@ -1640,6 +1640,9 @@
                                         <div
                                             style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
                                             <div class="section-label" style="margin-bottom:0;">Raw Text Editor</div>
+                                            <button class="btn btn-save" @click="saveListText">
+                                                Update List Locally
+                                            </button>
                                         </div>
                                         <div class="input-row" style="margin-bottom:16px;">
                                             <textarea class="fi fi-mono" v-model="currentRawText" @input="saveListText"
@@ -1690,6 +1693,9 @@
                                                 style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
                                                 <div class="section-label" style="margin-bottom:0;">Raw Text Editor
                                                     (URLs)</div>
+                                                <button class="btn btn-save" @click="saveUrlText">
+                                                    Update URLs Locally
+                                                </button>
                                             </div>
                                             <div class="input-row" style="margin-bottom:16px;">
                                                 <textarea class="fi fi-mono" v-model="currentRawUrlText" @input="saveUrlText"
@@ -1791,16 +1797,16 @@
                 
                 const topbarStatus = computed(() => {
                     if (syncState.value === 'github') return 'Pushing to GitHub...';
-                    if (syncState.value === 'cloudflare') return 'Deploying to Edge...';
+                    if (syncState.value === 'cloudflare') return 'Deploying to Cloudflare...';
                     if (syncing.value) return 'Syncing Lists...';
                     if (latestCommitSha.value) {
-                        let str = `Edge: ${latestCommitSha.value}`;
+                        let str = `GitHub: ${latestCommitSha.value}`;
                         if (liveEdgeTime.value && liveEdgeTime.value !== 'never') {
                             str += ` (${timeAgo(liveEdgeTime.value)})`;
                         }
                         return str;
                     }
-                    return 'Edge Status: Unknown';
+                    return 'GitHub Status: Unknown';
                 });
 
                 // Toast
@@ -1814,11 +1820,13 @@
                 let sysTimer = setInterval(() => sysTime.value = Date.now(), 60000);
                 onUnmounted(() => clearInterval(sysTimer));
 
-                // Auto-detect changes
+                // Auto-detect changes deeply against initial state
                 let initDone = false;
+                const initialSnapshot = ref('');
                 watch([config, lists, customUrls], () => {
                    if (!initDone) return;
-                   hasChanges.value = true;
+                   const current = JSON.stringify({ c: config.value, cd: lists.value, u: customUrls.value });
+                   hasChanges.value = (current !== initialSnapshot.value);
                 }, { deep: true });
 
                 const fmt = n => n ? Number(n).toLocaleString() : '0';
@@ -2063,16 +2071,18 @@
                 // ===== CONFIG =====
                 const loadConfig = async (skipEdgeCheck = false) => {
                     try {
-                        const [c, cd, u] = await Promise.all([
+                        const [c, cd, u, s] = await Promise.all([
                             githubGet('database/dns_gateway_config.json'),
                             githubGet('database/custom_domains.json'),
-                            githubGet('database/custom_urls.json')
+                            githubGet('database/custom_urls.json'),
+                            githubGet('database/stats.json')
                         ]);
                         if(c) config.value = c;
                         if(cd) lists.value = cd;
                         if(u) customUrls.value = u;
-                        stats.value = { lastFetch: new Date().toISOString() };
+                        stats.value = s || { lastFetch: new Date().toISOString() };
                         
+                        initialSnapshot.value = JSON.stringify({ c: config.value, cd: lists.value, u: customUrls.value });
                         // Mark init as done so we can start watching for changes
                         setTimeout(() => { initDone = true; hasChanges.value = false; }, 500);
 
@@ -2111,6 +2121,7 @@
                     const lines = currentRawUrlText.value.split('\n').map(l=>l.trim()).filter(l=>l && !l.startsWith('#'));
                     customUrls.value[listTab.value] = lines;
                     customUrls.value[listTab.value + '_text'] = currentRawUrlText.value;
+                    showToast('Staged URLs changes', 'info');
                 };
 
                 const saveListText = () => {
@@ -2118,6 +2129,7 @@
                     if(listTab.value === 'redirect_rules') {
                         lists.value[listTab.value] = lines.map(l=>{ const p=l.split(/\s+/); return {source:p[0], target:p[1]}; }).filter(x=>x.source&&x.target);
                     } else { lists.value[listTab.value] = lines; }
+                    showToast('Staged list changes', 'info');
                 };
 
                 // ===== LIVE SYNC POLLING =====
