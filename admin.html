@@ -2239,6 +2239,25 @@
                     return false;
                 };
 
+                const pollStatsSync = async (oldTimestamp) => {
+                    const maxAttempts = 60; // Up to 120 seconds
+                    let attempts = 0;
+                    while (attempts < maxAttempts) {
+                        try {
+                            const res = await fetch(`/database/stats.json?v=${Date.now()}`, { cache: 'no-store' });
+                            if (res.ok) {
+                                const d = await res.json();
+                                if (d && d._updated && d._updated > oldTimestamp) {
+                                    return true;
+                                }
+                            }
+                        } catch (e) { }
+                        await new Promise(r => setTimeout(r, 2000));
+                        attempts++;
+                    }
+                    return false;
+                };
+
                 const waitForCommitSuccess = async (sha) => {
                     let attempts = 0;
                     while (attempts < 60) {
@@ -2304,6 +2323,7 @@
                     
                     try {
                         const timeMs = Date.now();
+                        const oldStatsTime = stats.value?._updated || 0;
                         config.value._updated = timeMs;
 
                         // 1. Get current commit SHA
@@ -2419,7 +2439,7 @@
                              syncState.value = 'cloudflare';
                              syncMsg.value = 'Waiting for final Cloudflare Edge Deployment (2/2)...';
                              showToast('Blocklists generated! Waiting for final Cloudflare deployment (2/2)...', 'info', 15000);
-                             const deploy2 = await waitForCommitSuccess(finalSha);
+                             const deploy2 = await pollStatsSync(oldStatsTime);
                              if (!deploy2) {
                                   showToast('Timeout waiting for Final Deploy!', 'error');
                                   syncing.value = false;
