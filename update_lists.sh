@@ -30,28 +30,30 @@ extract_domains() {
 }
 
 echo "Downloading and processing blocklists..."
-if [ -f "database/custom_urls.json" ]; then
-  BLOCK_URLS=$(jq -r '.blocklist[]?' database/custom_urls.json)
-  if [ -n "$BLOCK_URLS" ]; then
-    echo "$BLOCK_URLS" | xargs curl -fsSL --max-time 60 | extract_domains > "$BLOCK_TMP"
-  else
-    > "$BLOCK_TMP"
+{
+  if [ -f "database/custom_urls.json" ]; then
+    BLOCK_URLS=$(jq -r '.blocklist[]?' database/custom_urls.json)
+    if [ -n "$BLOCK_URLS" ]; then
+      echo "$BLOCK_URLS" | xargs -I {} -P 4 curl -fsSL --max-time 60 {}
+    fi
   fi
-else
-  > "$BLOCK_TMP"
-fi
+  if [ -f "database/custom_domains.json" ]; then
+    jq -r '.blocklist[]?' database/custom_domains.json
+  fi
+} | extract_domains > "$BLOCK_TMP"
 
 echo "Downloading and processing allowlists..."
-if [ -f "database/custom_urls.json" ]; then
-  ALLOW_URLS=$(jq -r '.allowlist[]?' database/custom_urls.json)
-  if [ -n "$ALLOW_URLS" ]; then
-    echo "$ALLOW_URLS" | xargs curl -fsSL --max-time 60 | extract_domains > "$ALLOW_TMP"
-  else
-    > "$ALLOW_TMP"
+{
+  if [ -f "database/custom_urls.json" ]; then
+    ALLOW_URLS=$(jq -r '.allowlist[]?' database/custom_urls.json)
+    if [ -n "$ALLOW_URLS" ]; then
+      echo "$ALLOW_URLS" | xargs -I {} -P 4 curl -fsSL --max-time 60 {}
+    fi
   fi
-else
-  > "$ALLOW_TMP"
-fi
+  if [ -f "database/custom_domains.json" ]; then
+    jq -r '.allowlist[]?' database/custom_domains.json
+  fi
+} | extract_domains > "$ALLOW_TMP"
 
 # Di chuyển file tmp vào thư mục đích
 mv "$BLOCK_TMP" "$BLOCK_OUT"
