@@ -1723,11 +1723,10 @@
                                                     listTab==='private_tlds' ?
                                                     config.PRIVATE_TLD_URL : config.MULLVAD_UPSTREAM_URL }}</span>
                                                 <span class="badge badge-i">
-                                                    {{ listTab==='blocklist' ? fmt(stats.blocklistSize) :
-                                                    listTab==='allowlist'
-                                                    ? (stats.allowlistSize||0) : listTab==='private_tlds' ?
-                                                    (stats.privateTldsSize||0) : (stats.mullvadDomainsSize||0) }} total
-                                                    (merged)
+                                                    {{ listTab==='blocklist' ? fmt(stats.blocklistSize || ((lists.blocklist||[]).length)) :
+                                                    listTab==='allowlist' ? fmt(stats.allowlistSize || ((lists.allowlist||[]).length)) : 
+                                                    listTab==='private_tlds' ? fmt(stats.privateTldsSize || ((lists.private_tlds||[]).length)) : 
+                                                    fmt(stats.mullvadDomainsSize || ((lists.mullvad_upstream||[]).length)) }} total (merged)
                                                 </span>
                                             </div>
                                             <div class="fh" style="margin-top:10px">Static file + external URLs + custom
@@ -2274,7 +2273,24 @@
                     syncing.value = true;
                     showToast('Triggering Github Action...', 'info');
                     try {
-                        const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/actions/workflows/Update_DNS_Blocklists.yml/dispatches`, {
+                        // Dynamically find workflow ID to avoid 404s and handle missing scope specifically
+                        let workflowId = 'Update_DNS_Blocklists.yml';
+                        try {
+                            const resWf = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/actions/workflows`, { headers: { 'Authorization': `Bearer ${sessionPAT}` } });
+                            if (resWf.ok) {
+                                const d = await resWf.json();
+                                const wf = d.workflows?.find(w => w.name.includes('Update DNS Blocklists') || w.path.includes('Update_DNS_Blocklists.yml'));
+                                if (wf) workflowId = wf.id;
+                            } else if (resWf.status === 404 || resWf.status === 403) {
+                                throw new Error('Cannot access workflows. Missng PAT `workflow` scope?');
+                            }
+                        } catch(e) {
+                            showToast('Workflow Fail: Token missing "workflow" scope or Action not found!', 'error');
+                            syncing.value = false;
+                            return;
+                        }
+
+                        const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/actions/workflows/${workflowId}/dispatches`, {
                             method: 'POST',
                             headers: { 'Authorization': `Bearer ${sessionPAT}`, 'Content-Type': 'application/json' },
                             body: JSON.stringify({ ref: 'main' })
