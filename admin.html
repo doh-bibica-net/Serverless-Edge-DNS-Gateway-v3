@@ -2183,6 +2183,63 @@
                     return false;
                 };
 
+                const waitForCommitSuccess = async (sha) => {
+                    let attempts = 0;
+                    while (attempts < 60) {
+                        try {
+                            const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/commits/${sha}/status`, { headers: { 'Authorization': `Bearer ${sessionPAT}` } });
+                            if (res.ok) {
+                                const data = await res.json();
+                                if (data.state === 'success') return true;
+                                if (data.state === 'failure' || data.state === 'error') return false;
+                            }
+                        } catch (e) { }
+                        await new Promise(r => setTimeout(r, 2000));
+                        attempts++;
+                    }
+                    return false;
+                };
+
+                const getLatestWorkflowRun = async () => {
+                    try {
+                        const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/actions/runs?event=workflow_dispatch`, { headers: { 'Authorization': `Bearer ${sessionPAT}` } });
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.workflow_runs && data.workflow_runs.length > 0) return data.workflow_runs[0].id;
+                        }
+                    } catch (e) { }
+                    return 0;
+                };
+
+                const waitForWorkflowCompletion = async (prevRunId) => {
+                    let currentRunId = 0;
+                    for (let i = 0; i < 20; i++) {
+                        await new Promise(r => setTimeout(r, 3000));
+                        try {
+                            const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/actions/runs?event=workflow_dispatch`, { headers: { 'Authorization': `Bearer ${sessionPAT}` } });
+                            if (res.ok) {
+                                const data = await res.json();
+                                if (data.workflow_runs && data.workflow_runs.length > 0 && data.workflow_runs[0].id > prevRunId) {
+                                    currentRunId = data.workflow_runs[0].id;
+                                    break;
+                                }
+                            }
+                        } catch(e) {}
+                    }
+                    if (!currentRunId) return false;
+                    for (let i = 0; i < 60; i++) {
+                        await new Promise(r => setTimeout(r, 3000));
+                        try {
+                            const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/actions/runs/${currentRunId}`, { headers: { 'Authorization': `Bearer ${sessionPAT}` } });
+                            if (res.ok) {
+                                const data = await res.json();
+                                if (data.status === 'completed') return data.conclusion === 'success';
+                            }
+                        } catch(e) {}
+                    }
+                    return false;
+                };
+
                 // ===== BATCH SAVE (TREES API) =====
                 const saveAll = async () => {
                     syncState.value = 'github';
@@ -2239,31 +2296,70 @@
                         });
                         if (!patchRes.ok) throw new Error(`Failed to update branch: ${patchRes.statusText}`);
 
-                        // 5. Monitor Cloudflare Sync fully before triggering workflow to prevent duplicate build cancellation
-                        showToast('Saved to Github! Waiting for Cloudflare Edge deployment...', 'info', 10000);
-                        
+                        // 5. Monitor Cloudflare Sync fully before triggering workflow
+                        showToast('Saved to Github! Waiting for Cloudflare deployment (1/2)...', 'info', 10000);
                         const edgeSynced = await pollCloudflareSync(timeMs);
                         
-                        if (edgeSynced) {
-                            showToast('Edge Status Success! Triggering blocklists workflow...', 'success');
-                            forceSync();
-                        } else {
-                            showToast('Timeout waiting for Deploy! Not triggering workflow.', 'error');
+                        if (!edgeSynced) {
+                            showToast('Timeout waiting for Deploy! Aborting orchestration.', 'error');
                             syncing.value = false;
+                            return;
                         }
+
+                        // Step 2. Trigger Action
+                        const oldRunId = await getLatestWorkflowRun();
+                        showToast('Deploy 1 Success! Triggering Github workflow...', 'success', 5000);
+                        const dispatched = await forceSync(true);
+                        if (!dispatched) {
+                            syncing.value = false;
+                            return;
+                        }
+
+                        // Step 3. Wait for Action completion
+                        showToast('Workflow running... Generating Blocklists...', 'info', 30000);
+                        const wfSuccess = await waitForWorkflowCompletion(oldRunId);
+                        if (!wfSuccess) {
+                            showToast('Workflow deployment failed or timed out!', 'error');
+                            syncing.value = false;
+                            return;
+                        }
+
+                        // Check if Action pushed a new commit
+                        let finalSha = newCommit.sha;
+                        try {
+                             const refRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/git/refs/heads/main`, { headers: { 'Authorization': `Bearer ${sessionPAT}` } });
+                             if(refRes.ok) {
+                                  const ref = await refRes.json();
+                                  finalSha = ref.object.sha;
+                             }
+                        } catch(e) {}
+
+                        if (finalSha !== newCommit.sha) {
+                             showToast('Blocklists generated! Waiting for final Cloudflare deployment (2/2)...', 'info', 15000);
+                             const deploy2 = await waitForCommitSuccess(finalSha);
+                             if (!deploy2) {
+                                  showToast('Timeout waiting for Final Deploy!', 'error');
+                                  syncing.value = false;
+                                  return;
+                             }
+                        }
+
+                        showToast('All Tasks Completed Successfully! Reloading Dashboard...', 'success', 5000);
+                        await loadConfig();
+                        hasChanges.value = false;
+                        syncing.value = false;
                     } catch(e) {
                         syncState.value = 'idle';
                         syncMsg.value = '';
                         showToast('Sync Error: ' + e.message, 'error');
                         console.error(e);
+                        syncing.value = false;
                     }
                 };
 
-                const forceSync = async () => {
-                    syncing.value = true;
-                    showToast('Triggering Github Action...', 'info');
+                const forceSync = async (calledInternally = false) => {
+                    if (!calledInternally) syncing.value = true;
                     try {
-                        // Dynamically find workflow ID to avoid 404s and handle missing scope specifically
                         let workflowId = 'Update_DNS_Blocklists.yml';
                         try {
                             const resWf = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/actions/workflows`, { headers: { 'Authorization': `Bearer ${sessionPAT}` } });
@@ -2271,13 +2367,11 @@
                                 const d = await resWf.json();
                                 const wf = d.workflows?.find(w => w.name.includes('Update DNS Blocklists') || w.path.includes('Update_DNS_Blocklists.yml'));
                                 if (wf) workflowId = wf.id;
-                            } else if (resWf.status === 404 || resWf.status === 403) {
-                                throw new Error('Cannot access workflows. Missng PAT `workflow` scope?');
                             }
-                        } catch(e) {
+                        } catch(e){
                             showToast('Workflow Fail: Token missing "workflow" scope or Action not found!', 'error');
-                            syncing.value = false;
-                            return;
+                            if (!calledInternally) setTimeout(() => { syncing.value = false; }, 3000);
+                            return false;
                         }
 
                         const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/actions/workflows/${workflowId}/dispatches`, {
@@ -2285,17 +2379,21 @@
                             headers: { 'Authorization': `Bearer ${sessionPAT}`, 'Content-Type': 'application/json' },
                             body: JSON.stringify({ ref: 'main' })
                         });
-                        if(res.ok) showToast('Workflow started! Please wait up to 60s for Cloudflare deployment.', 'success');
-                        else {
+                        if(res.ok) {
+                            if (!calledInternally) {
+                                showToast('Workflow manually started! Syncing in background.', 'success');
+                                setTimeout(() => { syncing.value = false; }, 3000);
+                            }
+                            return true;
+                        } else {
                             const err = await res.json().catch(()=>({}));
                             let msg = err.message || res.statusText;
-                            if (res.status === 404 || res.status === 403) {
-                                msg += ' (Hint: Make sure your PAT has the "workflow" scope enabled!)';
-                            }
+                            if (res.status === 404 || res.status === 403) msg += ' (Hint: Missing PAT `workflow` scope!)';
                             showToast('Workflow Fail: ' + msg, 'error');
                         }
                     } catch(e) { showToast('Sync Err: ' + e.message, 'error'); }
-                    setTimeout(() => { syncing.value = false; }, 3000);
+                    if (!calledInternally) setTimeout(() => { syncing.value = false; }, 3000);
+                    return false;
                 };
 
                 // ===== INIT =====
