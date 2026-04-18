@@ -2,7 +2,5 @@
   "redirect_rules": [],
   "private_tlds": [],
   "mullvad_upstream": [],
-  "blocklist": [
-    "a.com"
-  ]
+  "blocklist": []
 }
