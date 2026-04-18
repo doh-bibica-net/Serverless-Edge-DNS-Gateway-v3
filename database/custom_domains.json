@@ -3,6 +3,6 @@
   "private_tlds": [],
   "mullvad_upstream": [],
   "blocklist": [
-    "baomoi.com"
+    "a.com"
   ]
 }
