@@ -1923,7 +1923,7 @@
                 const login = async () => {
                     try {
                         const u = await githubGet('database/admin_user.json');
-                        if (u && u.needsSetup) { appState.value = 'setup'; return; }
+                        if (!u || u.needsSetup) { appState.value = 'setup'; return; }
                         const pat = await aesDecrypt(u.encrypted_pat, loginPass.value);
                         if(pat) {
                             sessionPAT = pat; appState.value = 'admin'; showToast('Login successful!');
@@ -2026,9 +2026,9 @@
                 onMounted(async () => {
                     try {
                         const u = await githubGet('database/admin_user.json');
-                        if (u && u.needsSetup) { appState.value = 'setup'; return; }
+                        if (!u || u.needsSetup) { appState.value = 'setup'; return; }
                         appState.value = 'login';
-                    } catch (e) { appState.value = 'login'; }
+                    } catch (e) { appState.value = 'setup'; }
                 });
 
                 return {
