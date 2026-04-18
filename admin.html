@@ -1390,28 +1390,28 @@
                                 </div>
                                 <div class="stat-card ok">
                                     <div class="stat-label">Blocklist</div>
-                                    <div class="stat-value">{{ fmt(stats.blocklistSize || ((lists.blocklist||[]).length)) }}</div>
-                                    <div class="stat-sub">Blocked domains (merged)</div>
+                                    <div class="stat-value">{{ fmt(stats.blocklistSize) }}</div>
+                                    <div class="stat-sub">Active blocked domains</div>
                                 </div>
                                 <div class="stat-card">
                                     <div class="stat-label">Allowlist</div>
-                                    <div class="stat-value">{{ fmt(stats.allowlistSize || ((lists.allowlist||[]).length)) }}</div>
-                                    <div class="stat-sub">Allowed domains (merged)</div>
+                                    <div class="stat-value">{{ fmt(stats.allowlistSize) }}</div>
+                                    <div class="stat-sub">Active safe domains</div>
                                 </div>
                                 <div class="stat-card err">
                                     <div class="stat-label">Private TLDs</div>
-                                    <div class="stat-value">{{ fmt((stats.privateTldsSize || 0) + ((lists.private_tlds||[]).length)) }}</div>
-                                    <div class="stat-sub">Internal domains (merged)</div>
+                                    <div class="stat-value">{{ fmt((lists.private_tlds||[]).length) }}</div>
+                                    <div class="stat-sub">Staged internal domains</div>
                                 </div>
                                 <div class="stat-card">
                                     <div class="stat-label">Mullvad</div>
-                                    <div class="stat-value">{{ fmt((stats.mullvadDomainsSize || 0) + ((lists.mullvad_upstream||[]).length)) }}</div>
-                                    <div class="stat-sub">Upstream domains (merged)</div>
+                                    <div class="stat-value">{{ fmt((lists.mullvad_upstream||[]).length) }}</div>
+                                    <div class="stat-sub">Staged upstream domains</div>
                                 </div>
                                 <div class="stat-card warn">
                                     <div class="stat-label">Redirect Rules</div>
-                                    <div class="stat-value">{{ fmt((stats.redirectRulesSize || 0) + ((lists.redirect_rules||[]).length)) }}</div>
-                                    <div class="stat-sub">CNAME overrides (merged)</div>
+                                    <div class="stat-value">{{ fmt((lists.redirect_rules||[]).length) }}</div>
+                                    <div class="stat-sub">Staged CNAME overrides</div>
                                 </div>
                             </div>
 
@@ -2120,25 +2120,57 @@
                 // ===== CONFIG =====
                 const loadConfig = async (skipEdgeCheck = false) => {
                     try {
-                        const [c, cd, u, s] = await Promise.all([
-                            githubGet('database/dns_gateway_config.json'),
-                            githubGet('database/custom_domains.json'),
-                            githubGet('database/custom_urls.json'),
-                            githubGet('database/stats.json')
-                        ]);
-                        if(c) config.value = c;
-                        if(cd) lists.value = cd;
-                        if(u) customUrls.value = u;
-                        stats.value = s || { lastFetch: new Date().toISOString() };
+                        const snap = await githubGet('database/all_configs_snapshot.json');
+                        if (snap) {
+                            config.value = snap.config || {};
+                            lists.value = snap.custom_lists || {};
+                            
+                            // Convert lists back to arrays if they are strings from the snapshot
+                            for (const k in lists.value) {
+                                if (typeof lists.value[k] === 'string') {
+                                    if (k === 'redirect_rules') {
+                                        lists.value[k] = lists.value[k].split('\n').map(l => {
+                                            const p = l.trim().split(/\s+/);
+                                            return p.length === 2 ? { source: p[0], target: p[1] } : null;
+                                        }).filter(x => x);
+                                    } else {
+                                        lists.value[k] = lists.value[k].split('\n').map(l => l.trim()).filter(l => l);
+                                    }
+                                }
+                            }
+
+                            customUrls.value = snap.urls || { blocklist: [], allowlist: [] };
+                        } else {
+                            // First time setup or fallback
+                            config.value = {
+                                UPSTREAM_PRIMARY: 'https://bu0eg1tdzu.cloudflare-gateway.com/dns-query',
+                                UPSTREAM_FALLBACK: 'https://rhpcv957tj.cloudflare-gateway.com/dns-query',
+                                UPSTREAM_GEO_BYPASS: 'https://dns.mullvad.net/dns-query',
+                                UPSTREAM_TIMEOUT: 5000,
+                                ALL_LISTS_REFRESH_INTERVAL: 3600000,
+                                AD_BLOCK_ENABLED: true,
+                                ECS_INJECTION_ENABLED: true,
+                                ECS_PREFIX_V4: 24,
+                                ECS_PREFIX_V6: 48,
+                                BLOCK_ANY: true,
+                                BLOCK_AAAA: true,
+                                BLOCK_PTR: true,
+                                BLOCK_HTTPS: true,
+                                BLOCK_PRIVATE_TLD: true,
+                                DNS_REDIRECT_ENABLED: true,
+                                MULLVAD_UPSTREAM_ENABLED: true,
+                            };
+                            lists.value = { blocklist: [], allowlist: [], redirect_rules: [], private_tlds: [], mullvad_upstream: [] };
+                            customUrls.value = { blocklist: [], allowlist: [] };
+                        }
+
+                        stats.value = await githubGet('database/stats.json') || { lastFetch: new Date().toISOString() };
                         
                         initialSnapshot.value = JSON.stringify({ c: config.value, cd: lists.value, u: customUrls.value });
-                        // Mark init as done so we can start watching for changes
                         setTimeout(() => { initDone = true; hasChanges.value = false; }, 500);
 
-                        if (!skipEdgeCheck) {
-                            await checkEdgeStatus(true);
-                        }
-                    } catch(e) { showToast('Load config failed', 'error'); }
+                        if (!skipEdgeCheck) await checkEdgeStatus(true);
+                    } catch(e) { console.error(e); showToast('Load config failed', 'error'); }
                 };
 
                 const updateConfig = (updates, message = 'Settings staged locally') => {
@@ -2203,7 +2235,7 @@
                     }
 
                     try {
-                        const res = await fetch(`/database/dns_gateway_config.json?v=${Date.now()}`, { method: 'HEAD' });
+                        const res = await fetch(`/database/all_configs_snapshot.json?v=${Date.now()}`, { method: 'HEAD' });
                         if (res.ok) {
                             const lm = res.headers.get('last-modified');
                             if (lm) {
@@ -2222,16 +2254,14 @@
                     } catch(e){}
                 };
 
-                const pollCloudflareSync = async (snapshot) => {
-                    const maxAttempts = 60; // Up to 60 seconds
+                const pollCloudflareSync = async (snapshotTime) => {
+                    const maxAttempts = 60;
                     let attempts = 0;
                     while (attempts < maxAttempts) {
                         try {
-                            const res = await fetch(`/database/dns_gateway_config.json?v=${Date.now()}`, { cache: 'no-store' });
+                            const res = await fetch(`/database/all_configs_snapshot.json?v=${Date.now()}`, { cache: 'no-store' });
                             const d = await res.json();
-                            if (d && d._updated === snapshot) {
-                                return true;
-                            }
+                            if (d && d._updated === snapshotTime) return true;
                         } catch (e) { }
                         await new Promise(r => setTimeout(r, 1000));
                         attempts++;
@@ -2298,16 +2328,74 @@
                     return false;
                 };
 
-                // ===== BATCH SAVE (TREES API) =====
+                // ===== BATCH SAVE (MARKER-BASED PATCHING) =====
+                const patchContent = (fullText, startMarker, endMarker, newInside) => {
+                    const startIdx = fullText.indexOf(startMarker);
+                    const endIdx = fullText.indexOf(endMarker);
+                    if (startIdx === -1 || endIdx === -1) {
+                        throw new Error(`Markers not found: ${startMarker} or ${endMarker}`);
+                    }
+                    const prefix = fullText.substring(0, startIdx + startMarker.length);
+                    const suffix = fullText.substring(endIdx);
+                    return prefix + "\n" + newInside.trim() + "\n" + suffix;
+                };
+
+                const patchWorkerCode = (code, cfg) => {
+                    const startMarker = "// CONFIG_START";
+                    const endMarker = "// CONFIG_END";
+                    
+                    const startIdx = code.indexOf(startMarker);
+                    const endIdx = code.indexOf(endMarker);
+                    if (startIdx === -1 || endIdx === -1) return patchWorkerVariables(code, cfg); // Fallback
+
+                    const configSection = code.substring(startIdx + startMarker.length, endIdx);
+                    const patchedSection = patchWorkerVariables(configSection, cfg);
+                    
+                    return code.substring(0, startIdx + startMarker.length) + patchedSection + code.substring(endIdx);
+                };
+
+                const patchWorkerVariables = (section, cfg) => {
+                    let patched = section;
+                    for (const [key, val] of Object.entries(cfg)) {
+                        if (key === '_updated') continue;
+                        const regex = new RegExp(`(const\\s+${key}\\s+=\\s+)([^;]+)(;)`);
+                        let replacement = JSON.stringify(val);
+                        if (typeof val === 'string') replacement = `'${val}'`;
+                        patched = patched.replace(regex, `$1${replacement}$3`);
+                    }
+                    return patched;
+                };
+
+                const patchScriptCode = (code, urls) => {
+                    let patched = code;
+                    
+                    // Patch Blocklist
+                    if (urls.blocklist && urls.blocklist.length > 0) {
+                        const blockContent = "  curl -fsSL --max-time 60 \\\n  " + urls.blocklist.join(" \\\n  ");
+                        patched = patchContent(patched, "# EXTERNAL_BLOCKLIST_START", "# EXTERNAL_BLOCKLIST_END", blockContent);
+                    } else {
+                        patched = patchContent(patched, "# EXTERNAL_BLOCKLIST_START", "# EXTERNAL_BLOCKLIST_END", "  # No external blocklists");
+                    }
+
+                    // Patch Allowlist
+                    if (urls.allowlist && urls.allowlist.length > 0) {
+                        const allowContent = "  curl -fsSL --max-time 60 \\\n  " + urls.allowlist.join(" \\\n  ");
+                        patched = patchContent(patched, "# EXTERNAL_ALLOWLIST_START", "# EXTERNAL_ALLOWLIST_END", allowContent);
+                    } else {
+                        patched = patchContent(patched, "# EXTERNAL_ALLOWLIST_START", "# EXTERNAL_ALLOWLIST_END", "  # No external allowlists");
+                    }
+
+                    return patched;
+                };
+
                 const saveAll = async () => {
                     syncState.value = 'github';
-                    syncMsg.value = 'Pushing bundle to GitHub...';
-                    showToast('Starting Sync...', 'info');
+                    syncMsg.value = 'Committing changes to GitHub...';
+                    showToast('Starting Atomic Sync...', 'info');
                     
                     try {
                         const timeMs = Date.now();
                         const oldStatsTime = stats.value?._updated || 0;
-                        config.value._updated = timeMs;
 
                         // 1. Get current commit SHA
                         const refUrl = `https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/git/matching-refs/heads/main`;
@@ -2317,131 +2405,116 @@
                         if (!refs.length) throw new Error('Branch "main" not found');
                         const baseSha = refs[0].object.sha;
 
-                        // 2. Create Tree
-                        const files = [
-                            { path: 'database/dns_gateway_config.json', content: JSON.stringify(config.value, null, 2) },
-                            { path: 'database/custom_domains.json', content: JSON.stringify(lists.value, null, 2) },
-                            { path: 'database/custom_urls.json', content: JSON.stringify(customUrls.value, null, 2) }
-                        ];
-                        const treeItems = files.map(f => ({
-                            path: f.path,
-                            mode: '100644',
-                            type: 'blob',
-                            content: f.content
-                        }));
+                        // 2. Fetch Source Files to patch
+                        syncMsg.value = 'Patching functional source files...';
+                        
+                        // Patch Worker
+                        const workerRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/contents/functions/[[path]].js`, {
+                             headers: { 'Authorization': `Bearer ${sessionPAT}` }
+                        });
+                        if (!workerRes.ok) throw new Error('Failed to fetch worker source code');
+                        const workerData = await workerRes.json();
+                        const workerCode = decodeURIComponent(escape(atob(workerData.content)));
+                        const patchedWorker = patchWorkerCode(workerCode, config.value);
 
+                        // Patch Script
+                        const scriptRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/contents/update_lists.sh`, {
+                             headers: { 'Authorization': `Bearer ${sessionPAT}` }
+                        });
+                        if (!scriptRes.ok) throw new Error('Failed to fetch update script source');
+                        const scriptData = await scriptRes.json();
+                        const scriptCode = decodeURIComponent(escape(atob(scriptData.content)));
+                        const patchedScript = patchScriptCode(scriptCode, customUrls.value);
+
+                        // 3. Prepare Tree Items
+                        const snapshot = {
+                            config: config.value,
+                            custom_lists: {
+                                blocklist: lists.value.blocklist.join('\n'),
+                                allowlist: lists.value.allowlist.join('\n'),
+                                redirect_rules: lists.value.redirect_rules.map(r => `${r.source} ${r.target}`).join('\n'),
+                                private_tlds: lists.value.private_tlds.join('\n'),
+                                mullvad_upstream: lists.value.mullvad_upstream.join('\n')
+                            },
+                            urls: customUrls.value,
+                            _updated: timeMs
+                        };
+
+
+                        const treeItems = [
+                            { path: 'functions/[[path]].js', mode: '100644', type: 'blob', content: patchedWorker },
+                            { path: 'update_lists.sh', mode: '100755', type: 'blob', content: patchedScript },
+                            { path: 'rules/custom_blocklists.txt', mode: '100644', type: 'blob', content: snapshot.custom_lists.blocklist },
+                            { path: 'rules/custom_allowlists.txt', mode: '100644', type: 'blob', content: snapshot.custom_lists.allowlist },
+                            { path: 'rules/redirect_rules.txt', mode: '100644', type: 'blob', content: snapshot.custom_lists.redirect_rules },
+                            { path: 'rules/private_tlds.txt', mode: '100644', type: 'blob', content: snapshot.custom_lists.private_tlds },
+                            { path: 'rules/mullvad_upstream.txt', mode: '100644', type: 'blob', content: snapshot.custom_lists.mullvad_upstream },
+                            { path: 'database/all_configs_snapshot.json', mode: '100644', type: 'blob', content: JSON.stringify(snapshot, null, 2) }
+                        ];
+
+                        // 4. Create Tree
                         const treeRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/git/trees`, {
                             method: 'POST',
                             headers: { 'Authorization': `Bearer ${sessionPAT}`, 'Content-Type': 'application/json' },
                             body: JSON.stringify({ base_tree: baseSha, tree: treeItems })
                         });
-                        if (!treeRes.ok) throw new Error(`Failed to create tree: ${treeRes.statusText}`);
+                        if (!treeRes.ok) throw new Error('Failed to create tree');
                         const newTree = await treeRes.json();
 
-                        // 3. Create Commit
+                        // 5. Create & Update Commit
                         const commitRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/git/commits`, {
                             method: 'POST',
                             headers: { 'Authorization': `Bearer ${sessionPAT}`, 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ message: 'Sync changes via Admin Batch Save', tree: newTree.sha, parents: [baseSha] })
+                            body: JSON.stringify({ message: 'Static Sync: Patch worker & update rules', tree: newTree.sha, parents: [baseSha] })
                         });
-                        if (!commitRes.ok) throw new Error(`Failed to create commit: ${commitRes.statusText}`);
                         const newCommit = await commitRes.json();
-
-                        // 4. Update Ref
-                        const patchRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/git/refs/heads/main`, {
+                        await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/git/refs/heads/main`, {
                             method: 'PATCH',
                             headers: { 'Authorization': `Bearer ${sessionPAT}`, 'Content-Type': 'application/json' },
                             body: JSON.stringify({ sha: newCommit.sha })
                         });
-                        if (!patchRes.ok) throw new Error(`Failed to update branch: ${patchRes.statusText}`);
 
-                        // 5. Monitor Cloudflare Sync fully before triggering workflow
+                        // 6. Monitor Sync
                         let needsWorkflow = false;
                         try {
                             const oldSnap = JSON.parse(initialSnapshot.value);
                             if (JSON.stringify(oldSnap.u) !== JSON.stringify(customUrls.value)) needsWorkflow = true;
-                            if (JSON.stringify(oldSnap.cd?.blocklist) !== JSON.stringify(lists.value?.blocklist)) needsWorkflow = true;
-                            if (JSON.stringify(oldSnap.cd?.allowlist) !== JSON.stringify(lists.value?.allowlist)) needsWorkflow = true;
+                            if (JSON.stringify(oldSnap.cd?.blocklist) !== JSON.stringify(lists.value.blocklist)) needsWorkflow = true;
+                            if (JSON.stringify(oldSnap.cd?.allowlist) !== JSON.stringify(lists.value.allowlist)) needsWorkflow = true;
                         } catch(e) { needsWorkflow = true; }
 
                         syncState.value = 'cloudflare';
-                        syncMsg.value = needsWorkflow ? 'Waiting for Cloudflare Deployment (1/2)...' : 'Waiting for Cloudflare Deployment...';
-                        showToast(`Saved to Github! Waiting for Cloudflare deployment${needsWorkflow ? ' (1/2)' : ''}...`, 'info', 10000);
+                        syncMsg.value = 'Waiting for Cloudflare Deployment...';
+                        showToast('Committed to GitHub! Waiting for Edge deployment...', 'info', 10000);
                         const edgeSynced = await pollCloudflareSync(timeMs);
                         
                         if (!edgeSynced) {
-                            showToast('Timeout waiting for Deploy! Aborting orchestration.', 'error');
-                            syncing.value = false;
-                            syncState.value = 'idle';
-                            return;
+                            showToast('Timeout waiting for Deploy!', 'error');
+                            syncing.value = false; syncState.value = 'idle'; return;
                         }
 
                         if (!needsWorkflow) {
-                             showToast('Settings saved & deployed successfully! No need to run Workflow.', 'success', 5000);
-                             await loadConfig();
-                             hasChanges.value = false;
-                             syncState.value = 'idle';
-                             syncing.value = false;
-                             return;
+                             showToast('Sync successful! No rebuild needed.', 'success');
+                             await loadConfig(); hasChanges.value = false; syncState.value = 'idle'; syncing.value = false; return;
                         }
 
-                        // Step 2. Trigger Action
+                        // 7. Workflow Management
                         syncState.value = 'github';
-                        syncMsg.value = 'Triggering Github Workflow...';
+                        syncMsg.value = 'Triggering Blocklist Generator...';
                         const oldRunId = await getLatestWorkflowRun();
-                        showToast('Deploy 1 Success! Triggering Github workflow...', 'success', 5000);
                         const dispatched = await forceSync(true);
-                        if (!dispatched) {
-                            syncing.value = false;
-                            syncState.value = 'idle';
-                            return;
-                        }
+                        if (!dispatched) { syncing.value = false; syncState.value = 'idle'; return; }
 
-                        // Step 3. Wait for Action completion
                         syncMsg.value = 'Workflow generating Blocklists...';
-                        showToast('Workflow running... Generating Blocklists...', 'info', 30000);
                         const wfSuccess = await waitForWorkflowCompletion(oldRunId);
-                        if (!wfSuccess) {
-                            showToast('Workflow deployment failed or timed out!', 'error');
-                            syncing.value = false;
-                            syncState.value = 'idle';
-                            return;
-                        }
+                        if (!wfSuccess) { showToast('Workflow failed!', 'error'); syncing.value = false; syncState.value = 'idle'; return; }
 
-                        // Check if Action pushed a new commit
-                        let finalSha = newCommit.sha;
-                        try {
-                             const refRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/git/refs/heads/main`, { headers: { 'Authorization': `Bearer ${sessionPAT}` } });
-                             if(refRes.ok) {
-                                  const ref = await refRes.json();
-                                  finalSha = ref.object.sha;
-                             }
-                        } catch(e) {}
-
-                        if (finalSha !== newCommit.sha) {
-                             syncState.value = 'cloudflare';
-                             syncMsg.value = 'Waiting for final Cloudflare Edge Deployment (2/2)...';
-                             showToast('Blocklists generated! Waiting for final Cloudflare deployment (2/2)...', 'info', 15000);
-                             const deploy2 = await pollStatsSync(oldStatsTime);
-                             if (!deploy2) {
-                                  showToast('Timeout waiting for Final Deploy!', 'error');
-                                  syncing.value = false;
-                                  syncState.value = 'idle';
-                                  return;
-                             }
-                        }
-
-                        showToast('All Tasks Completed Successfully! Reloading Dashboard...', 'success', 5000);
-                        await loadConfig();
-                        hasChanges.value = false;
-                        syncState.value = 'idle';
-                        syncing.value = false;
+                        showToast('Sync Complete! Reloading Dashboard...', 'success');
+                        await loadConfig(); hasChanges.value = false; syncState.value = 'idle'; syncing.value = false;
                     } catch(e) {
-                        syncState.value = 'idle';
-                        syncMsg.value = '';
+                        syncState.value = 'idle'; syncing.value = false;
                         showToast('Sync Error: ' + e.message, 'error');
                         console.error(e);
-                        syncing.value = false;
                     }
                 };
 
