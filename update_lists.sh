@@ -32,9 +32,10 @@ extract_domains() {
 echo "Downloading and processing blocklists..."
 {
   if [ -f "database/custom_urls.json" ]; then
-    BLOCK_URLS=$(jq -r '.blocklist[]?' database/custom_urls.json)
+    BLOCK_URLS=$(jq -r '.blocklist[]?' database/custom_urls.json | tr '\n' ' ')
     if [ -n "$BLOCK_URLS" ]; then
-      echo "$BLOCK_URLS" | xargs -I {} -P 4 curl -fsSL --max-time 60 {}
+      curl -fsSL --max-time 60 $BLOCK_URLS
+      echo ""
     fi
   fi
   if [ -f "database/custom_domains.json" ]; then
@@ -45,9 +46,10 @@ echo "Downloading and processing blocklists..."
 echo "Downloading and processing allowlists..."
 {
   if [ -f "database/custom_urls.json" ]; then
-    ALLOW_URLS=$(jq -r '.allowlist[]?' database/custom_urls.json)
+    ALLOW_URLS=$(jq -r '.allowlist[]?' database/custom_urls.json | tr '\n' ' ')
     if [ -n "$ALLOW_URLS" ]; then
-      echo "$ALLOW_URLS" | xargs -I {} -P 4 curl -fsSL --max-time 60 {}
+      curl -fsSL --max-time 60 $ALLOW_URLS
+      echo ""
     fi
   fi
   if [ -f "database/custom_domains.json" ]; then
