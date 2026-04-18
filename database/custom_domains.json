@@ -125,5 +125,7 @@
   "blocklist": [
     "baomoi.com"
   ],
-  "allowlist": []
+  "allowlist": [
+    "baomoi.com"
+  ]
 }
