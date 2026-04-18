@@ -58,3 +58,14 @@ mv "$BLOCK_TMP" "$BLOCK_OUT"
 mv "$ALLOW_TMP" "$ALLOW_OUT"
 
 echo "Done. Files saved to $BLOCK_OUT and $ALLOW_OUT"
+
+# Sinh file stats
+BLOCK_COUNT=$(wc -l < "$BLOCK_OUT" | tr -d ' ' || echo 0)
+ALLOW_COUNT=$(wc -l < "$ALLOW_OUT" | tr -d ' ' || echo 0)
+
+cat <<EOF > database/stats.json
+{
+  "blocklistSize": ${BLOCK_COUNT:-0},
+  "allowlistSize": ${ALLOW_COUNT:-0}
+}
+EOF
