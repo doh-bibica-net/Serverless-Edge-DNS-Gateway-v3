@@ -1530,14 +1530,14 @@
                             </div>
 
                             <div style="display: flex; justify-content: space-between; margin-top: 15px;">
-                                <button @click="saveUpstreams" class="btn btn-save">
+                                <button @click="saveUpstreams" class="btn btn-save" style="opacity: 0.6; pointer-events: none;">
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                         stroke-width="2">
                                         <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
                                         <polyline points="17 21 17 13 7 13 7 21" />
                                         <polyline points="7 3 7 8 15 8" />
                                     </svg>
-                                    Save Upstream Settings
+                                    Changes Staged Locally
                                 </button>
                                 <button @click="resetUpstreams" class="btn btn-s">
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1772,6 +1772,13 @@
                 const sysTime = ref(Date.now());
                 let sysTimer = setInterval(() => sysTime.value = Date.now(), 60000);
                 onUnmounted(() => clearInterval(sysTimer));
+
+                // Auto-detect changes
+                let initDone = false;
+                watch([config, lists, customUrls], () => {
+                   if (!initDone) return;
+                   hasChanges.value = true;
+                }, { deep: true });
 
                 const fmt = n => n ? Number(n).toLocaleString() : '0';
                 const timeAgo = iso => {
@@ -2024,6 +2031,9 @@
                         if(cd) lists.value = cd;
                         if(u) customUrls.value = u;
                         stats.value = { lastSync: new Date().toISOString() };
+                        
+                        // Mark init as done so we can start watching for changes
+                        setTimeout(() => { initDone = true; hasChanges.value = false; }, 500);
                     } catch(e) { showToast('Load config failed', 'error'); }
                 };
 
@@ -2057,7 +2067,6 @@
                     const lines = currentRawUrlText.value.split('\n').map(l=>l.trim()).filter(l=>l && !l.startsWith('#'));
                     customUrls.value[listTab.value] = lines;
                     customUrls.value[listTab.value + '_text'] = currentRawUrlText.value;
-                    hasChanges.value = true;
                     showToast('Staged URLs changes', 'info');
                 };
 
@@ -2066,7 +2075,6 @@
                     if(listTab.value === 'redirect_rules') {
                         lists.value[listTab.value] = lines.map(l=>{ const p=l.split(/\s+/); return {source:p[0], target:p[1]}; }).filter(x=>x.source&&x.target);
                     } else { lists.value[listTab.value] = lines; }
-                    hasChanges.value = true;
                     showToast('Staged list changes', 'info');
                 };
 
@@ -2076,10 +2084,11 @@
                     showToast('Bundling changes...', 'info');
                     try {
                         // 1. Get current commit SHA
-                        const refRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/git/matching-refs/heads/main`, {
-                            headers: { 'Authorization': `Bearer ${sessionPAT}` }
-                        });
+                        const refUrl = `https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/git/matching-refs/heads/main`;
+                        const refRes = await fetch(refUrl, { headers: { 'Authorization': `Bearer ${sessionPAT}` } });
+                        if (!refRes.ok) throw new Error(`Failed to get base ref: ${refRes.statusText}`);
                         const refs = await refRes.json();
+                        if (!refs.length) throw new Error('Branch "main" not found');
                         const baseSha = refs[0].object.sha;
 
                         // 2. Create Tree
@@ -2100,6 +2109,7 @@
                             headers: { 'Authorization': `Bearer ${sessionPAT}`, 'Content-Type': 'application/json' },
                             body: JSON.stringify({ base_tree: baseSha, tree: treeItems })
                         });
+                        if (!treeRes.ok) throw new Error(`Failed to create tree: ${treeRes.statusText}`);
                         const newTree = await treeRes.json();
 
                         // 3. Create Commit
@@ -2108,22 +2118,25 @@
                             headers: { 'Authorization': `Bearer ${sessionPAT}`, 'Content-Type': 'application/json' },
                             body: JSON.stringify({ message: 'Sync changes via Admin Batch Save', tree: newTree.sha, parents: [baseSha] })
                         });
+                        if (!commitRes.ok) throw new Error(`Failed to create commit: ${commitRes.statusText}`);
                         const newCommit = await commitRes.json();
 
                         // 4. Update Ref
-                        await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/git/refs/heads/main`, {
+                        const patchRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/git/refs/heads/main`, {
                             method: 'PATCH',
                             headers: { 'Authorization': `Bearer ${sessionPAT}`, 'Content-Type': 'application/json' },
                             body: JSON.stringify({ sha: newCommit.sha })
                         });
+                        if (!patchRes.ok) throw new Error(`Failed to update branch: ${patchRes.statusText}`);
 
                         hasChanges.value = false;
-                        showToast('Saved & Commited!', 'success');
+                        showToast('Saved & Committed!', 'success');
                         
-                        // 5. Trigger Workflow (with 1.5s delay to let GitHub catch up)
+                        // 5. Trigger Workflow
                         setTimeout(forceSync, 1500);
                     } catch(e) {
                          showToast('Batch Save failed: ' + e.message, 'error');
+                         console.error(e);
                     } finally {
                         syncing.value = false;
                     }
