@@ -1077,6 +1077,17 @@
                 flex-wrap: wrap;
             }
         }
+        /* Pulsing Save Button */
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); transform: scale(1); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); transform: scale(1.02); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); transform: scale(1); }
+        }
+        .pulse-red {
+            background-color: #ef4444 !important;
+            border-color: #ef4444 !important;
+            animation: pulse-red 2s infinite;
+        }
     </style>
 </head>
 
@@ -1145,21 +1156,6 @@
                 <div class="fg"><label class="fl">Password</label><input type="password" class="fi" v-model="loginPass"
                         placeholder="Password" @keyup.enter="login"></div>
                 <button @click="login" class="btn btn-p login-btn">Sign In</button>
-            </div>
-        </div>
-
-        <!-- NO KV -->
-        <div v-if="appState==='no-kv'" class="login-overlay">
-            <div class="login-card">
-                <h2 style="margin-bottom:12px">⚠️ KV Setup Required</h2>
-                <p style="margin-bottom:0">Bind a KV namespace as <code>DNS_GATEWAY_KV</code> in your
-                    <code>wrangler.toml</code> or Cloudflare Dashboard.
-                </p>
-                <div class="kv-code">
-                    [[kv_namespaces]]<br>
-                    binding = "DNS_GATEWAY_KV"<br>
-                    id = "your-namespace-id"
-                </div>
             </div>
         </div>
 
@@ -1264,7 +1260,7 @@
                 <header class="topbar">
                     <h2>{{ tabLabels[tab] }}</h2>
                     <div class="topbar-right" style="gap: 12px;">
-                        <span v-if="stats.hasKV && appState === 'admin'" class="badge badge-s" title="List Cache Age"
+                        <span v-if="appState === 'admin'" class="badge badge-s" title="List Cache Age"
                             style="font-family: monospace;">
                             ⏱ Last Refresh: {{ stats.lastFetch==='never' ? 'Never' : timeAgo(stats.lastFetch) }}
                         </span>
@@ -1274,13 +1270,19 @@
                                 style="padding: 4px 8px; background: transparent; border: 1px solid var(--border); color: var(--text-2); border-radius: 6px; font-size: 14px; cursor: pointer;">
                                 {{ theme === 'light' ? '🌙' : '☀️' }}
                             </button>
-                            <button v-if="appState === 'admin'" class="btn" @click="forceSync" :disabled="syncing"
-                                title="Force Sync Lists"
+                            
+                            <!-- BATCH SAVE BUTTON -->
+                            <button v-if="hasChanges" @click="saveAll" class="btn pulse-red" :disabled="syncing"
+                                title="Save All Changes to GitHub"
+                                style="padding: 6px 14px; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer;">
+                                {{ syncing ? 'Saving...' : 'Save & Sync' }}
+                            </button>
+                            <button v-else @click="forceSync" class="btn" :disabled="syncing"
+                                title="Sync Lists"
                                 style="padding: 4px 8px; background: transparent; border: 1px solid var(--border); color: var(--text-2); border-radius: 6px; font-size: 14px; cursor: pointer;">
                                 {{ syncing ? '⏳' : '🔄' }}
                             </button>
                         </div>
-                        <span v-if="!stats.hasKV" class="badge badge-w" style="margin-left: 4px;">⚠ No KV</span>
                     </div>
                 </header>
 
@@ -1289,11 +1291,6 @@
 
                         <!-- ======= DASHBOARD ======= -->
                         <div v-if="tab==='dashboard'">
-                            <div v-if="!stats.hasKV" class="alert alert-i">
-                                ℹ️ No KV binding detected. Bind <code>DNS_GATEWAY_KV</code> for persistent config and
-                                custom
-                                domain lists.
-                            </div>
 
                             <!-- Stats row -->
                             <div class="stats-grid">
@@ -1554,10 +1551,6 @@
 
                         <!-- ======= LISTS ======= -->
                         <div v-if="tab==='lists'">
-                            <div v-if="!stats.hasKV" class="alert alert-w">
-                                ⚠️ KV not configured — custom domain lists require <code>DNS_GATEWAY_KV</code> binding.
-                                Changes won't persist.
-                            </div>
 
                             <!-- Tab selector -->
                             <div class="list-tabs">
@@ -1621,14 +1614,13 @@
                                         <div
                                             style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
                                             <div class="section-label" style="margin-bottom:0;">Raw Text Editor</div>
-                                            <button class="btn btn-save" @click="saveListText"
-                                                :disabled="!stats.hasKV || saving">
-                                                {{ saving ? 'Saving...' : 'Save & Apply Config' }}
+                                            <button class="btn btn-save" @click="saveListText">
+                                                Update List Locally
                                             </button>
                                         </div>
                                         <div class="input-row" style="margin-bottom:16px;">
                                             <textarea class="fi fi-mono" v-model="currentRawText"
-                                                :placeholder="textPlaceholders[listTab]" :disabled="!stats.hasKV"
+                                                :placeholder="textPlaceholders[listTab]"
                                                 rows="12"
                                                 style="resize: vertical; white-space: pre; overflow-x: auto; box-sizing: border-box; width: 100%; font-size: 13px; line-height: 1.6; padding: 12px;"></textarea>
                                         </div>
@@ -1737,6 +1729,7 @@
         createApp({
             setup() {
                 const appState = ref('loading');
+                const hasChanges = ref(false);
                 const theme = ref(localStorage.getItem('dnsadm_theme') || 'light');
                 watch(theme, (newVal) => {
                     document.documentElement.setAttribute('data-theme', newVal);
@@ -1952,6 +1945,9 @@
                         };
                         await githubPut('database/admin_user.json', JSON.stringify(userObj, null, 2));
 
+                        sessionStorage.setItem('dnsadm_pat', sessionPAT);
+                        sessionStorage.setItem('dnsadm_user', userObj.username);
+
                         localStorage.setItem('dnsadm_owner', GITHUB_OWNER.value);
                         localStorage.setItem('dnsadm_repo', GITHUB_REPO.value);
 
@@ -1967,13 +1963,22 @@
                         if (loginUser.value.trim() !== u.username) { authError.value = 'Invalid username or password'; return; }
                         const pat = await aesDecrypt(u.encrypted_pat, loginPass.value);
                         if(pat) {
-                            sessionPAT = pat; appState.value = 'admin'; showToast('Login successful!');
+                            sessionPAT = pat; 
+                            adminUsername.value = u.username;
+                            sessionStorage.setItem('dnsadm_pat', pat);
+                            sessionStorage.setItem('dnsadm_user', u.username);
+                            appState.value = 'admin'; showToast('Login successful!');
                             await loadConfig();
                         } else { authError.value = 'Invalid password'; }
                     } catch(e) { authError.value = 'Network error fetching admin DB'; }
                 };
 
-                const logout = () => { sessionPAT = ''; appState.value = 'login'; };
+                const logout = () => { 
+                    sessionPAT = ''; 
+                    sessionStorage.removeItem('dnsadm_pat');
+                    sessionStorage.removeItem('dnsadm_user');
+                    appState.value = 'login'; 
+                };
 
                 // ===== CONFIG =====
                 const loadConfig = async () => {
@@ -1990,14 +1995,10 @@
                     } catch(e) { showToast('Load config failed', 'error'); }
                 };
 
-                const updateConfig = async (updates) => {
-                    saving.value = true;
-                    try {
-                        config.value = { ...config.value, ...updates };
-                        await githubPut('database/dns_gateway_config.json', JSON.stringify(config.value, null, 2));
-                        showToast('Settings saved to Github');
-                    } catch(e) { showToast('Save failed', 'error'); }
-                    finally { saving.value = false; }
+                const updateConfig = (updates) => {
+                    config.value = { ...config.value, ...updates };
+                    hasChanges.value = true;
+                    showToast('Settings staged locally', 'info');
                 };
 
                 const toggleFeature = k => updateConfig({ [k]: !config.value[k] });
@@ -2020,29 +2021,80 @@
                 const loadLists = async () => { listsLoading.value = true; await loadConfig(); reloadCurrentRawText(); listsLoading.value = false; };
                 const switchToLists = async () => { tab.value = 'lists'; await loadLists(); };
 
-                const saveUrlText = async () => {
-                    savingUrl.value = true;
-                    try {
-                        const lines = currentRawUrlText.value.split('\n').map(l=>l.trim()).filter(l=>l && !l.startsWith('#'));
-                        customUrls.value[listTab.value] = lines;
-                        customUrls.value[listTab.value + '_text'] = currentRawUrlText.value;
-                        await githubPut('database/custom_urls.json', JSON.stringify(customUrls.value, null, 2));
-                        showToast('URLs saved to Github');
-                    } catch(e) { showToast('Save failed', 'error'); }
-                    finally { savingUrl.value = false; }
+                const saveUrlText = () => {
+                    const lines = currentRawUrlText.value.split('\n').map(l=>l.trim()).filter(l=>l && !l.startsWith('#'));
+                    customUrls.value[listTab.value] = lines;
+                    customUrls.value[listTab.value + '_text'] = currentRawUrlText.value;
+                    hasChanges.value = true;
+                    showToast('Staged URLs changes', 'info');
                 };
 
-                const saveListText = async () => {
-                    savingList.value = true;
+                const saveListText = () => {
+                    const lines = currentRawText.value.split('\n').map(l=>l.trim()).filter(l=>l && !l.startsWith('#'));
+                    if(listTab.value === 'redirect_rules') {
+                        lists.value[listTab.value] = lines.map(l=>{ const p=l.split(/\s+/); return {source:p[0], target:p[1]}; }).filter(x=>x.source&&x.target);
+                    } else { lists.value[listTab.value] = lines; }
+                    hasChanges.value = true;
+                    showToast('Staged list changes', 'info');
+                };
+
+                // ===== BATCH SAVE (TREES API) =====
+                const saveAll = async () => {
+                    syncing.value = true;
+                    showToast('Bundling changes...', 'info');
                     try {
-                        const lines = currentRawText.value.split('\n').map(l=>l.trim()).filter(l=>l && !l.startsWith('#'));
-                        if(listTab.value === 'redirect_rules') {
-                            lists.value[listTab.value] = lines.map(l=>{ const p=l.split(/\s+/); return {source:p[0], target:p[1]}; }).filter(x=>x.source&&x.target);
-                        } else { lists.value[listTab.value] = lines; }
-                        await githubPut('database/custom_domains.json', JSON.stringify(lists.value, null, 2));
-                        showToast('Lists saved to Github');
-                    } catch(e) { showToast('Save failed', 'error'); }
-                    finally { savingList.value = false; }
+                        // 1. Get current commit SHA
+                        const refRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/git/matching-refs/heads/main`, {
+                            headers: { 'Authorization': `Bearer ${sessionPAT}` }
+                        });
+                        const refs = await refRes.json();
+                        const baseSha = refs[0].object.sha;
+
+                        // 2. Create Tree
+                        const files = [
+                            { path: 'database/dns_gateway_config.json', content: JSON.stringify(config.value, null, 2) },
+                            { path: 'database/custom_domains.json', content: JSON.stringify(lists.value, null, 2) },
+                            { path: 'database/custom_urls.json', content: JSON.stringify(customUrls.value, null, 2) }
+                        ];
+                        const treeItems = files.map(f => ({
+                            path: f.path,
+                            mode: '100644',
+                            type: 'blob',
+                            content: f.content
+                        }));
+
+                        const treeRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/git/trees`, {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${sessionPAT}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ base_tree: baseSha, tree: treeItems })
+                        });
+                        const newTree = await treeRes.json();
+
+                        // 3. Create Commit
+                        const commitRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/git/commits`, {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${sessionPAT}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ message: 'Sync changes via Admin Batch Save', tree: newTree.sha, parents: [baseSha] })
+                        });
+                        const newCommit = await commitRes.json();
+
+                        // 4. Update Ref
+                        await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/git/refs/heads/main`, {
+                            method: 'PATCH',
+                            headers: { 'Authorization': `Bearer ${sessionPAT}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ sha: newCommit.sha })
+                        });
+
+                        hasChanges.value = false;
+                        showToast('Saved & Commited!', 'success');
+                        
+                        // 5. Trigger Workflow
+                        await forceSync();
+                    } catch(e) {
+                         showToast('Batch Save failed: ' + e.message, 'error');
+                    } finally {
+                        syncing.value = false;
+                    }
                 };
 
                 const forceSync = async () => {
@@ -2054,9 +2106,9 @@
                             headers: { 'Authorization': `Bearer ${sessionPAT}`, 'Content-Type': 'application/json' },
                             body: JSON.stringify({ ref: 'main' })
                         });
-                        if(res.ok) showToast('Github Action Triggered!');
+                        if(res.ok) showToast('Syncing workflow started!');
                         else showToast('Failed to trigger workflow', 'error');
-                    } catch(e) { showToast('Network err', 'error'); }
+                    } catch(e) { showToast('Sync Err: ' + e.message, 'error'); }
                     finally { syncing.value = false; }
                 };
 
@@ -2065,6 +2117,14 @@
 
                 // ===== INIT =====
                 onMounted(async () => {
+                    // Check Session
+                    const savedPAT = sessionStorage.getItem('dnsadm_pat');
+                    const savedUser = sessionStorage.getItem('dnsadm_user');
+                    if (savedPAT && savedUser) {
+                        sessionPAT = savedPAT;
+                        adminUsername.value = savedUser;
+                    }
+
                     if (!GITHUB_OWNER.value || !GITHUB_REPO.value) {
                         try {
                             const res = await fetch(`/database/admin_user.json?t=${Date.now()}`);
@@ -2084,6 +2144,14 @@
                          appState.value = 'setup';
                          return;
                     }
+
+                    // If we have session, go straight to admin if files exist
+                    if (sessionPAT) {
+                         appState.value = 'admin';
+                         await loadConfig();
+                         return;
+                    }
+
                     try {
                         const u = await githubGet('database/admin_user.json');
                         if (!u || u.needsSetup) { appState.value = 'setup'; return; }
@@ -2092,7 +2160,7 @@
                 });
 
                 return {
-                    appState, tab, token, adminUsername, config, stats,
+                    appState, tab, token, adminUsername, config, stats, hasChanges,
                     loginUser, loginPass, regOwner, regRepo, regPAT, regUser, regPass, regPass2, authError,
                     lists, listTab, customUrls, currentRawText, currentRawUrlText, newUrl,
                     saving, savingUrl, savingList, syncing, listsLoading, toastMsg, toastType,
@@ -2100,7 +2168,7 @@
                     features, filters, allFeatures,
                     activeFeatureCount, activeFilterCount, activeCount, totalCount, totalCustomEntries,
                     register, login, logout, toggleFeature, saveUpstreams, resetUpstreams,
-                    switchToLists, loadLists, saveListText, saveUrlText, forceSync,
+                    switchToLists, loadLists, saveListText, saveUrlText, forceSync, saveAll,
                     addUrl, removeUrl,
                     fmt, timeAgo, showToast, theme, toggleTheme
                 };
