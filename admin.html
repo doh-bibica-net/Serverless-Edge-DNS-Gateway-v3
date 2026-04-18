@@ -1283,9 +1283,10 @@
                 <header class="topbar">
                     <h2>{{ tabLabels[tab] }}</h2>
                     <div class="topbar-right" style="gap: 12px;">
-                        <span v-if="appState === 'admin'" class="badge badge-s" title="List Cache Age"
-                            style="font-family: monospace;">
-                            ⏱ Last Refresh: {{ stats.lastFetch==='never' ? 'Never' : timeAgo(stats.lastFetch) }}
+                        <span v-if="appState === 'admin'" class="badge" :class="syncState === 'idle' ? 'badge-n' : 'badge-w'" style="font-family: monospace; display: flex; align-items: center; gap: 6px;" title="Edge Status">
+                            <span v-if="syncState !== 'idle' || syncing" class="spinner-small" style="width: 10px; height: 10px; border-width: 1.5px; border-top-color: currentColor;"></span>
+                            <span v-else>⏱</span>
+                            {{ topbarStatus }}
                         </span>
 
                         <div style="display: flex; gap: 8px; align-items: center;">
@@ -1294,36 +1295,22 @@
                                 {{ theme === 'light' ? '🌙' : '☀️' }}
                             </button>
                             
-                            <!-- BATCH SAVE BUTTON -->
-                            <button v-if="hasChanges || syncState !== 'idle'" @click="saveAll" 
-                                class="btn" :class="{'pulse-red': hasChanges && syncState === 'idle', 'btn-syncing': syncState !== 'idle'}" 
-                                :disabled="syncState !== 'idle'"
-                                title="Sync Status"
-                                style="padding: 6px 14px; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
-                                <template v-if="syncState === 'github'">
-                                    <span class="spinner-small"></span> GitHub...
-                                </template>
-                                <template v-else-if="syncState === 'cloudflare'">
-                                    <span class="spinner-small"></span> Cloudflare...
-                                </template>
-                                <template v-else>
-                                    {{ hasChanges ? 'Save & Sync' : 'Synced' }}
-                                </template>
-                            </button>
-                            <button v-else @click="forceSync" class="btn" :disabled="syncing"
-                                title="Force Sync Lists"
-                                style="padding: 4px 8px; background: transparent; border: 1px solid var(--border); color: var(--text-2); border-radius: 6px; font-size: 14px; cursor: pointer;">
-                                🔄
+                            <!-- UNIFIED SAVE & SYNC BUTTON -->
+                            <button @click="hasChanges ? saveAll() : forceSync()" class="btn btn-save" 
+                                :class="{'pulse-red': hasChanges && syncState === 'idle'}" 
+                                :disabled="syncState !== 'idle' || syncing"
+                                :title="hasChanges ? 'Save Changes' : 'Force Sync Lists'"
+                                style="padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                                <svg v-if="!(syncState !== 'idle' || syncing)" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"></path>
+                                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                                    <polyline points="7 3 7 8 15 8"></polyline>
+                                </svg>
+                                <span v-else class="spinner-small" style="width: 14px; height: 14px; border-top-color: currentColor;"></span>
                             </button>
                         </div>
                     </div>
                 </header>
-                
-                <!-- SYNC STATUS BAR -->
-                <div v-if="syncState !== 'idle'" class="sync-status-bar" :class="syncState">
-                    <span v-if="syncState!=='done'" class="spinner-small" style="margin-right: 12px; border-top-color: currentColor;"></span>
-                    {{ syncMsg }}
-                </div>
 
                 <div class="content">
                     <div class="content-inner">
@@ -1653,12 +1640,9 @@
                                         <div
                                             style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
                                             <div class="section-label" style="margin-bottom:0;">Raw Text Editor</div>
-                                            <button class="btn btn-save" @click="saveListText">
-                                                Update List Locally
-                                            </button>
                                         </div>
                                         <div class="input-row" style="margin-bottom:16px;">
-                                            <textarea class="fi fi-mono" v-model="currentRawText"
+                                            <textarea class="fi fi-mono" v-model="currentRawText" @input="saveListText"
                                                 :placeholder="textPlaceholders[listTab]"
                                                 rows="12"
                                                 style="resize: vertical; white-space: pre; overflow-x: auto; box-sizing: border-box; width: 100%; font-size: 13px; line-height: 1.6; padding: 12px;"></textarea>
@@ -1706,13 +1690,9 @@
                                                 style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
                                                 <div class="section-label" style="margin-bottom:0;">Raw Text Editor
                                                     (URLs)</div>
-                                                <button class="btn btn-save" @click="saveUrlText"
-                                                    :disabled="savingUrl">
-                                                    Update URLs Locally
-                                                </button>
                                             </div>
                                             <div class="input-row" style="margin-bottom:16px;">
-                                                <textarea class="fi fi-mono" v-model="currentRawUrlText"
+                                                <textarea class="fi fi-mono" v-model="currentRawUrlText" @input="saveUrlText"
                                                     :placeholder="urlPlaceholders[listTab]"
                                                     rows="5"
                                                     style="resize: vertical; white-space: pre; overflow-x: auto; box-sizing: border-box; width: 100%; font-size: 13px; line-height: 1.6; padding: 12px;"></textarea>
@@ -1802,6 +1782,26 @@
                 const newUrl = ref('');
                 const savingUrl = ref(false);
                 const savingList = ref(false);
+                
+                // Edge Status Polling
+                const latestCommitSha = ref('');
+                const liveEdgeTime = ref('');
+                const lastKnownEdgeTime = ref('');
+                let edgePollTimer = null;
+                
+                const topbarStatus = computed(() => {
+                    if (syncState.value === 'github') return 'Pushing to GitHub...';
+                    if (syncState.value === 'cloudflare') return 'Deploying to Edge...';
+                    if (syncing.value) return 'Syncing Lists...';
+                    if (latestCommitSha.value) {
+                        let str = `Edge: ${latestCommitSha.value}`;
+                        if (liveEdgeTime.value && liveEdgeTime.value !== 'never') {
+                            str += ` (${timeAgo(liveEdgeTime.value)})`;
+                        }
+                        return str;
+                    }
+                    return 'Edge Status: Unknown';
+                });
 
                 // Toast
                 const toastMsg = ref(''); const toastType = ref('success');
@@ -2061,7 +2061,7 @@
                 };
 
                 // ===== CONFIG =====
-                const loadConfig = async () => {
+                const loadConfig = async (skipEdgeCheck = false) => {
                     try {
                         const [c, cd, u] = await Promise.all([
                             githubGet('database/dns_gateway_config.json'),
@@ -2075,6 +2075,10 @@
                         
                         // Mark init as done so we can start watching for changes
                         setTimeout(() => { initDone = true; hasChanges.value = false; }, 500);
+
+                        if (!skipEdgeCheck) {
+                            await checkEdgeStatus(true);
+                        }
                     } catch(e) { showToast('Load config failed', 'error'); }
                 };
 
@@ -2101,14 +2105,12 @@
                 };
                 watch(listTab, reloadCurrentRawText);
 
-                const loadLists = async () => { listsLoading.value = true; await loadConfig(); reloadCurrentRawText(); listsLoading.value = false; };
-                const switchToLists = async () => { tab.value = 'lists'; await loadLists(); };
+                const switchToLists = () => { tab.value = 'lists'; reloadCurrentRawText(); };
 
                 const saveUrlText = () => {
                     const lines = currentRawUrlText.value.split('\n').map(l=>l.trim()).filter(l=>l && !l.startsWith('#'));
                     customUrls.value[listTab.value] = lines;
                     customUrls.value[listTab.value + '_text'] = currentRawUrlText.value;
-                    showToast('Staged URLs changes', 'info');
                 };
 
                 const saveListText = () => {
@@ -2116,10 +2118,42 @@
                     if(listTab.value === 'redirect_rules') {
                         lists.value[listTab.value] = lines.map(l=>{ const p=l.split(/\s+/); return {source:p[0], target:p[1]}; }).filter(x=>x.source&&x.target);
                     } else { lists.value[listTab.value] = lines; }
-                    showToast('Staged list changes', 'info');
                 };
 
                 // ===== LIVE SYNC POLLING =====
+                const checkEdgeStatus = async (updateGithubCommit = false) => {
+                    if (updateGithubCommit) {
+                        try {
+                            const refRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/git/refs/heads/main`, { headers: { 'Authorization': `Bearer ${sessionPAT}` } });
+                            if (refRes.ok) {
+                                const refData = await refRes.json();
+                                if (refData.object && refData.object.sha) {
+                                    latestCommitSha.value = refData.object.sha.substring(0, 7);
+                                }
+                            }
+                        } catch(e){}
+                    }
+
+                    try {
+                        const res = await fetch(`/database/dns_gateway_config.json?v=${Date.now()}`, { method: 'HEAD' });
+                        if (res.ok) {
+                            const lm = res.headers.get('last-modified');
+                            if (lm) {
+                                liveEdgeTime.value = new Date(lm).toISOString();
+                                
+                                const newTime = new Date(lm).getTime();
+                                const oldTime = lastKnownEdgeTime.value ? new Date(lastKnownEdgeTime.value).getTime() : 0;
+                                
+                                if (oldTime > 0 && newTime > oldTime && syncState.value === 'idle' && !hasChanges.value) {
+                                    showToast('Edge deployed a new version. Reloading UI...', 'info');
+                                    await loadConfig(true);
+                                }
+                                lastKnownEdgeTime.value = lm;
+                            }
+                        }
+                    } catch(e){}
+                };
+
                 const pollCloudflareSync = async (targetCfg) => {
                     syncState.value = 'cloudflare';
                     syncMsg.value = 'Commit success! Waiting for Cloudflare Pages deployment...';
@@ -2127,27 +2161,25 @@
                     let attempts = 0;
                     const maxAttempts = 30; // 90 seconds
                     
+                    checkEdgeStatus(true);
+                    
                     while (attempts < maxAttempts) {
                         try {
-                            // Fetch public config with cache buster
-                            const res = await fetch(`${window.location.origin}/database/dns_gateway_config.json?v=${Date.now()}`, { cache: 'no-store' });
+                            const res = await fetch(`/database/dns_gateway_config.json?v=${Date.now()}`, { cache: 'no-store' });
                             if (res.ok) {
                                 const live = await res.json();
-                                // Compare key fields (simplified equality check for config)
                                 if (JSON.stringify(live) === JSON.stringify(targetCfg)) {
                                     syncState.value = 'idle';
                                     syncMsg.value = '';
                                     hasChanges.value = false;
                                     showToast('Full Sync Complete (Live on Edge)!', 'success');
-                                    // Final reload to ensure data consistency
-                                    await loadConfig();
+                                    await checkEdgeStatus(true);
                                     return;
                                 }
                             }
-                        } catch (e) { console.warn("Polling error:", e); }
+                        } catch (e) {}
                         
                         attempts++;
-                        syncMsg.value = `GitHub synced. Waiting for Cloudflare (${attempts}/${maxAttempts})...`;
                         await new Promise(r => setTimeout(r, 3000));
                     }
                     
@@ -2240,14 +2272,13 @@
                             showToast('Workflow Fail: ' + (err.message || res.statusText), 'error');
                         }
                     } catch(e) { showToast('Sync Err: ' + e.message, 'error'); }
-                    finally { syncing.value = false; }
+                    setTimeout(() => { syncing.value = false; }, 3000);
                 };
-
-                const addUrl = () => { showToast('Add URL to the text area and click Save', 'info'); };
-                const removeUrl = () => { showToast('Remove URL from text area and click Save', 'info'); };
 
                 // ===== INIT =====
                 onMounted(async () => {
+                    edgePollTimer = setInterval(() => checkEdgeStatus(false), 30000);
+                    
                     // 1. Restore Session (for F5 persistence)
                     const savedPAT = sessionStorage.getItem('dnsadm_pat');
                     const savedUser = sessionStorage.getItem('dnsadm_user');
@@ -2279,6 +2310,10 @@
                     }
                 });
 
+                onUnmounted(() => {
+                    if (edgePollTimer) clearInterval(edgePollTimer);
+                });
+
                 return {
                     appState, tab, adminUsername, config, stats, hasChanges, syncState, syncMsg,
                     loginUser, loginPass, regOwner, regRepo, regPAT, regUser, regPass, regPass2, authError,
@@ -2288,9 +2323,8 @@
                     features, filters, allFeatures,
                     activeFeatureCount, activeFilterCount, activeCount, totalCount, totalCustomEntries,
                     register, login, logout, toggleFeature, saveUpstreams, resetUpstreams,
-                    switchToLists, loadLists, saveListText, saveUrlText, forceSync, saveAll,
-                    addUrl, removeUrl,
-                    fmt, timeAgo, showToast, theme, toggleTheme
+                    switchToLists, saveListText, saveUrlText, forceSync, saveAll,
+                    fmt, timeAgo, showToast, theme, toggleTheme, topbarStatus
                 };
             }
         }).mount('#app');
