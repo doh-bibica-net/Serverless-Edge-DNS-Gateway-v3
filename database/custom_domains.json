@@ -122,6 +122,8 @@
     "steampowered.com",
     "steamstatic.com"
   ],
-  "blocklist": [],
+  "blocklist": [
+    "baomoi.com"
+  ],
   "allowlist": []
 }
