@@ -2166,37 +2166,21 @@
                     } catch(e){}
                 };
 
-                const pollCloudflareSync = async (targetCfg) => {
-                    syncState.value = 'cloudflare';
-                    syncMsg.value = 'Commit success! Waiting for Cloudflare Pages deployment...';
-                    
+                const pollCloudflareSync = async (snapshot) => {
+                    const maxAttempts = 60; // Up to 60 seconds
                     let attempts = 0;
-                    const maxAttempts = 30; // 90 seconds
-                    
-                    checkEdgeStatus(true);
-                    
                     while (attempts < maxAttempts) {
                         try {
                             const res = await fetch(`/database/dns_gateway_config.json?v=${Date.now()}`, { cache: 'no-store' });
-                            if (res.ok) {
-                                const live = await res.json();
-                                if (JSON.stringify(live) === JSON.stringify(targetCfg)) {
-                                    syncState.value = 'idle';
-                                    syncMsg.value = '';
-                                    hasChanges.value = false;
-                                    showToast('Full Sync Complete (Live on Edge)!', 'success');
-                                    await checkEdgeStatus(true);
-                                    return;
-                                }
+                            const d = await res.json();
+                            if (d && d._updated === snapshot) {
+                                return true;
                             }
-                        } catch (e) {}
-                        
+                        } catch (e) { }
+                        await new Promise(r => setTimeout(r, 1000));
                         attempts++;
-                        await new Promise(r => setTimeout(r, 3000));
                     }
-                    
-                    syncState.value = 'idle';
-                    showToast('Sync timeout - check Cloudflare dashboard', 'warning');
+                    return false;
                 };
 
                 // ===== BATCH SAVE (TREES API) =====
@@ -2206,8 +2190,8 @@
                     showToast('Starting Sync...', 'info');
                     
                     try {
-                        // Capture snapshot of current config to verify against later
-                        const snapshot = JSON.parse(JSON.stringify(config.value));
+                        const timeMs = Date.now();
+                        config.value._updated = timeMs;
 
                         // 1. Get current commit SHA
                         const refUrl = `https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/git/matching-refs/heads/main`;
@@ -2255,17 +2239,23 @@
                         });
                         if (!patchRes.ok) throw new Error(`Failed to update branch: ${patchRes.statusText}`);
 
-                        // 5. Trigger Workflow (List generation)
-                        forceSync(); 
-
-                        // 6. Enter Cloudflare Sync Monitoring
-                        await pollCloudflareSync(snapshot);
-
+                        // 5. Monitor Cloudflare Sync fully before triggering workflow to prevent duplicate build cancellation
+                        showToast('Saved to Github! Waiting for Cloudflare Edge deployment...', 'info', 10000);
+                        
+                        const edgeSynced = await pollCloudflareSync(timeMs);
+                        
+                        if (edgeSynced) {
+                            showToast('Edge Status Success! Triggering blocklists workflow...', 'success');
+                            forceSync();
+                        } else {
+                            showToast('Timeout waiting for Deploy! Not triggering workflow.', 'error');
+                            syncing.value = false;
+                        }
                     } catch(e) {
-                         syncState.value = 'idle';
-                         syncMsg.value = '';
-                         showToast('Sync Error: ' + e.message, 'error');
-                         console.error(e);
+                        syncState.value = 'idle';
+                        syncMsg.value = '';
+                        showToast('Sync Error: ' + e.message, 'error');
+                        console.error(e);
                     }
                 };
 
