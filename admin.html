@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Serverless Edge DNS Gateway</title>
+    <title>Admin — Serverless Edge DNS Gateway</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <style>
         [v-cloak] {
@@ -1927,7 +1927,7 @@
                     { key: 'ECS_INJECTION_ENABLED', label: 'ECS Injection', desc: 'Inject EDNS Client Subnet for CDN geo-optimization' }
                 ];
                 const filters = [
-                    { key: 'BLOCK_ANY', label: 'Block ANY (TYPE 255)', desc: 'Block ANY queries - DNS amplification attack vector' },
+                    { key: 'BLOCK_ANY', label: 'Block ANY (TYPE 255)', desc: 'Block ANY queries — DNS amplification attack vector' },
                     { key: 'BLOCK_AAAA', label: 'Block AAAA (TYPE 28)', desc: 'Block IPv6 address queries' },
                     { key: 'BLOCK_PTR', label: 'Block PTR (TYPE 12)', desc: 'Block reverse DNS lookups' },
                     { key: 'BLOCK_HTTPS', label: 'Block HTTPS (TYPE 65)', desc: 'Block HTTPS/SVCB record queries' },
@@ -2323,31 +2323,6 @@
                             { path: 'database/custom_domains.json', content: JSON.stringify(lists.value, null, 2) },
                             { path: 'database/custom_urls.json', content: JSON.stringify(customUrls.value, null, 2) }
                         ];
-
-                        try {
-                            const workerRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER.value}/${GITHUB_REPO.value}/contents/functions/%5B%5Bpath%5D%5D.js`, { headers: { 'Authorization': `Bearer ${sessionPAT}` } });
-                            if (workerRes.ok) {
-                                const workerData = await workerRes.json();
-                                const binaryString = atob(workerData.content.replace(/\s/g, ''));
-                                const bytes = new Uint8Array(binaryString.length);
-                                for (let i = 0; i < binaryString.length; i++) {
-                                    bytes[i] = binaryString.charCodeAt(i);
-                                }
-                                let workerContent = new TextDecoder('utf-8').decode(bytes);
-                                
-                                Object.keys(config.value).forEach(k => {
-                                   if (k.startsWith('_')) return;
-                                   const v = config.value[k];
-                                   if (typeof v === 'boolean' || typeof v === 'number') {
-                                       workerContent = workerContent.replace(new RegExp('const ' + k + '\\s*=\\s*[^;]+;'), 'const ' + k + ' = ' + v + ';');
-                                   } else if (typeof v === 'string') {
-                                       workerContent = workerContent.replace(new RegExp('const ' + k + '\\s*=\\s*([\'"])[^\'"]*\\1;'), 'const ' + k + ' = \'' + v + '\';');
-                                   }
-                                });
-                                files.push({ path: 'functions/[[path]].js', content: workerContent });
-                            }
-                        } catch(e) { console.error('Failed to patch worker script', e); }
-
                         const treeItems = files.map(f => ({
                             path: f.path,
                             mode: '100644',
