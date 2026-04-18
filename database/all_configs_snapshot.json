@@ -1,6 +1,6 @@
 {
   "config": {
-    "UPSTREAM_PRIMARY": "https://bu0eg1tdzu.cloudflare-gateway.com/dns-query",
+    "UPSTREAM_PRIMARY": "https://dns.google/dns-query",
     "UPSTREAM_FALLBACK": "https://rhpcv957tj.cloudflare-gateway.com/dns-query",
     "UPSTREAM_GEO_BYPASS": "https://dns.mullvad.net/dns-query",
     "UPSTREAM_TIMEOUT": 5000,
@@ -39,5 +39,5 @@
     "blocklist_text": "https://adguardteam.github.io/HostlistsRegistry/assets/filter_16.txt\nhttps://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt\nhttps://raw.githubusercontent.com/bibicadotnet/AdGuard-Home-blocklists/refs/heads/main/byme.txt\nhttps://raw.githubusercontent.com/VeleSila/yhosts/master/hosts\nhttps://badmojr.github.io/1Hosts/Lite/adblock.txt",
     "allowlist_text": "https://raw.githubusercontent.com/bibicadotnet/AdGuard-Home-blocklists/refs/heads/main/whitelist.txt"
   },
-  "_updated": 1776528391904
+  "_updated": 1776528650427
 }
