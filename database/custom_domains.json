@@ -1,7 +1,127 @@
 {
-  "redirect_rules": [],
-  "private_tlds": [],
-  "mullvad_upstream": [],
+  "redirect_rules": [
+    {
+      "source": "www.bilibili.tv",
+      "target": "www.bilibili.tv.w.cdngslb.com"
+    },
+    {
+      "source": "upos-sz-mirrorcos.bilivideo.com",
+      "target": "upos-hz-mirrorakam.akamaized.net"
+    },
+    {
+      "source": "upos-sz-mirrorcosb.bilivideo.com",
+      "target": "upos-hz-mirrorakam.akamaized.net"
+    },
+    {
+      "source": "upos-sz-mirrorbos.bilivideo.com",
+      "target": "upos-hz-mirrorakam.akamaized.net"
+    },
+    {
+      "source": "upos-sz-mirrorhw.bilivideo.com",
+      "target": "upos-hz-mirrorakam.akamaized.net"
+    },
+    {
+      "source": "upos-sz-mirrorhwb.bilivideo.com",
+      "target": "upos-hz-mirrorakam.akamaized.net"
+    },
+    {
+      "source": "upos-sz-upcdnbda2.bilivideo.com",
+      "target": "upos-hz-mirrorakam.akamaized.net"
+    },
+    {
+      "source": "upos-sz-upcdnws.bilivideo.com",
+      "target": "upos-hz-mirrorakam.akamaized.net"
+    },
+    {
+      "source": "upos-sz-mirrorali.bilivideo.com",
+      "target": "upos-hz-mirrorakam.akamaized.net"
+    },
+    {
+      "source": "upos-sz-mirroraliov.bilivideo.com",
+      "target": "upos-hz-mirrorakam.akamaized.net"
+    },
+    {
+      "source": "upos-sz-mirror08h.bilivideo.com",
+      "target": "upos-hz-mirrorakam.akamaized.net"
+    },
+    {
+      "source": "upos-sz-mirrorcosov.bilivideo.com",
+      "target": "upos-hz-mirrorakam.akamaized.net"
+    },
+    {
+      "source": "medium.com",
+      "target": "rocket.net"
+    },
+    {
+      "source": "pornhub.com",
+      "target": "www.pornhub.com"
+    },
+    {
+      "source": "deo.shopeemobile.com",
+      "target": "deo.shopeemobile.com-v1.edgesuite.net"
+    },
+    {
+      "source": "cf.shopee.vn",
+      "target": "cf.shopee.vn.akamaized.net"
+    },
+    {
+      "source": "down-vn.img.susercontent.com",
+      "target": "zshopee.v.baishan-cloud.net"
+    }
+  ],
+  "private_tlds": [
+    "internal",
+    "localdomain",
+    "example",
+    "invalid",
+    "localhost",
+    "test",
+    "local",
+    "onion",
+    "lan",
+    "home",
+    "fpt",
+    "unused",
+    "router",
+    "instant.arubanetworks.com",
+    "setmeup.arubanetworks.com",
+    "asusrouter.com",
+    "router.asus.com",
+    "router.asus",
+    "www.asusrouter.com",
+    "oasisauth.h3c.com",
+    "routerlogin.com",
+    "www.routerlogin.com",
+    "tplogin.cn",
+    "miwifi.com",
+    "itotolink.net",
+    "plex.direct",
+    "peiluyou.com",
+    "tplinkwifi.net",
+    "tendawifi.com",
+    "hiwifi.com",
+    "leike.cc",
+    "router.ctc",
+    "phicomm.me",
+    "ts.net",
+    "home.arpa",
+    "in-addr.arpa",
+    "ip6.arpa",
+    "192.168.1.1",
+    "192.168.1.0"
+  ],
+  "mullvad_upstream": [
+    "gravatar.com",
+    "github.io",
+    "github.com",
+    "githubcopilot.com",
+    "githubusercontent.com",
+    "github-cloud.s3.amazonaws.com",
+    "githubassets.com",
+    "steamcommunity.com",
+    "steampowered.com",
+    "steamstatic.com"
+  ],
   "blocklist": [
     "226669.com",
     "226669.com"
