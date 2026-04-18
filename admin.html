@@ -1928,18 +1928,27 @@
                         const plain = await crypto.subtle.decrypt({name: 'AES-GCM', iv}, key, cipher);
                         return new TextDecoder().decode(plain);
                     } catch { return null; }
-                };
-
-                // ===== AUTH =====
                 const register = async () => {
                     if (regPass.value !== regPass2.value) { authError.value = 'Passwords do not match'; return; }
                     if (!regPAT.value || regPAT.value.length < 10) { authError.value = 'Invalid PAT'; return; }
                     if (!regOwner.value || !regRepo.value) { authError.value = 'Missing GitHub Owner or Repo'; return; }
                     if (!regUser.value || regUser.value.length < 2) { authError.value = 'Missing Admin Username'; return; }
+                    
                     try {
                         sessionPAT = regPAT.value;
                         GITHUB_OWNER.value = regOwner.value.trim();
                         GITHUB_REPO.value = regRepo.value.trim();
+
+                        // Detect if account already exists on GitHub
+                        showToast('Checking GitHub for existing account...', 'info');
+                        const existing = await githubGet('database/admin_user.json');
+                        if (existing && !existing.needsSetup) {
+                            showToast('Account already exists for this repository! Switching to login.', 'info');
+                            localStorage.setItem('dnsadm_owner', GITHUB_OWNER.value);
+                            localStorage.setItem('dnsadm_repo', GITHUB_REPO.value);
+                            appState.value = 'login';
+                            return;
+                        }
 
                         const encrypted = await aesEncrypt(regPAT.value, regPass.value);
                         const userObj = { 
@@ -1953,30 +1962,46 @@
 
                         sessionStorage.setItem('dnsadm_pat', sessionPAT);
                         sessionStorage.setItem('dnsadm_user', userObj.username);
-
                         localStorage.setItem('dnsadm_owner', GITHUB_OWNER.value);
                         localStorage.setItem('dnsadm_repo', GITHUB_REPO.value);
 
                         appState.value = 'admin'; showToast('Setup successful!');
                         await loadConfig();
-                    } catch(e) { authError.value = e.message; }
+                    } catch(e) { authError.value = 'Registration failed: ' + e.message; }
                 };
 
                 const login = async () => {
+                    authError.value = '';
                     try {
-                        const u = await githubGet('database/admin_user.json');
+                        // 1. Fetch user info from LOCAL SERVER (no PAT needed)
+                        const res = await fetch(`/database/admin_user.json?t=${Date.now()}`);
+                        if (!res.ok) { authError.value = 'Admin account not found on server'; return; }
+                        const u = await res.json();
+                        
                         if (!u || u.needsSetup) { appState.value = 'setup'; return; }
                         if (loginUser.value.trim() !== u.username) { authError.value = 'Invalid username or password'; return; }
+                        
+                        // 2. Decrypt PAT with provided password
                         const pat = await aesDecrypt(u.encrypted_pat, loginPass.value);
                         if(pat) {
                             sessionPAT = pat; 
                             adminUsername.value = u.username;
+                            GITHUB_OWNER.value = u.owner;
+                            GITHUB_REPO.value = u.repo;
+
                             sessionStorage.setItem('dnsadm_pat', pat);
                             sessionStorage.setItem('dnsadm_user', u.username);
+                            localStorage.setItem('dnsadm_owner', u.owner);
+                            localStorage.setItem('dnsadm_repo', u.repo);
+
                             appState.value = 'admin'; showToast('Login successful!');
                             await loadConfig();
-                        } else { authError.value = 'Invalid password'; }
-                    } catch(e) { authError.value = 'Network error fetching admin DB'; }
+                        } else { 
+                            authError.value = 'Invalid password'; 
+                        }
+                    } catch(e) { 
+                        authError.value = 'Login failed: ' + e.message; 
+                    }
                 };
 
                 const logout = () => { 
@@ -2126,7 +2151,7 @@
 
                 // ===== INIT =====
                 onMounted(async () => {
-                    // Check Session
+                    // 1. Restore Session (for F5 persistence)
                     const savedPAT = sessionStorage.getItem('dnsadm_pat');
                     const savedUser = sessionStorage.getItem('dnsadm_user');
                     if (savedPAT && savedUser) {
@@ -2134,38 +2159,27 @@
                         adminUsername.value = savedUser;
                     }
 
-                    if (!GITHUB_OWNER.value || !GITHUB_REPO.value) {
-                        try {
-                            const res = await fetch(`/database/admin_user.json?t=${Date.now()}`);
-                            if (res.ok) {
-                                const siteU = await res.json();
-                                if (siteU && siteU.owner && siteU.repo) {
-                                    GITHUB_OWNER.value = siteU.owner;
-                                    GITHUB_REPO.value = siteU.repo;
-                                    localStorage.setItem('dnsadm_owner', siteU.owner);
-                                    localStorage.setItem('dnsadm_repo', siteU.repo);
-                                }
-                            }
-                        } catch(e) {}
-                    }
-
-                    if (!GITHUB_OWNER.value || !GITHUB_REPO.value) {
-                         appState.value = 'setup';
-                         return;
-                    }
-
-                    // If we have session, go straight to admin if files exist
-                    if (sessionPAT) {
-                         appState.value = 'admin';
-                         await loadConfig();
-                         return;
-                    }
-
+                    // 2. Fetch admin status from LOCAL SERVER (The Standard)
                     try {
-                        const u = await githubGet('database/admin_user.json');
-                        if (!u || u.needsSetup) { appState.value = 'setup'; return; }
-                        appState.value = 'login';
-                    } catch (e) { appState.value = 'setup'; }
+                        const res = await fetch(`/database/admin_user.json?t=${Date.now()}`);
+                        if (res.ok) {
+                            const u = await res.json();
+                            if (u && !u.needsSetup) {
+                                GITHUB_OWNER.value = u.owner;
+                                GITHUB_REPO.value = u.repo;
+                                if (sessionPAT) {
+                                    appState.value = 'admin';
+                                    await loadConfig();
+                                } else {
+                                    appState.value = 'login';
+                                }
+                                return;
+                            }
+                        }
+                        appState.value = 'setup';
+                    } catch(e) {
+                         appState.value = 'setup';
+                    }
                 });
 
                 return {
