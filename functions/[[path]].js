@@ -1,58 +1,27 @@
 // ==================== CONFIG ====================
-let UPSTREAM_PRIMARY = 'https://bu0eg1tdzu.cloudflare-gateway.com/dns-query';
-let UPSTREAM_FALLBACK = 'https://rhpcv957tj.cloudflare-gateway.com/dns-query';
-let UPSTREAM_GEO_BYPASS = 'https://dns.mullvad.net/dns-query';
-let UPSTREAM_TIMEOUT = 5000;
+const UPSTREAM_PRIMARY = 'https://bu0eg1tdzu.cloudflare-gateway.com/dns-query';
+const UPSTREAM_FALLBACK = 'https://rhpcv957tj.cloudflare-gateway.com/dns-query';
+const UPSTREAM_GEO_BYPASS = 'https://dns.mullvad.net/dns-query';
+const UPSTREAM_TIMEOUT = 5000;
 
-let ALL_LISTS_REFRESH_INTERVAL = 3600000;
+const ALL_LISTS_REFRESH_INTERVAL = 3600000;
 
-let AD_BLOCK_ENABLED = true;
+const AD_BLOCK_ENABLED = true;
 const BLOCKLIST_URL = '/rules/blocklists.txt';
 const ALLOWLIST_URL = '/rules/allowlists.txt';
 
-let ECS_INJECTION_ENABLED = true;
-let ECS_PREFIX_V4 = 24;
-let ECS_PREFIX_V6 = 48;
+const ECS_INJECTION_ENABLED = true;
+const ECS_PREFIX_V4 = 24;
+const ECS_PREFIX_V6 = 48;
 
-let BLOCK_ANY = true;
-let BLOCK_AAAA = true;
-let BLOCK_PTR = true;
-let BLOCK_HTTPS = true;
+const BLOCK_ANY = true;
+const BLOCK_AAAA = true;
+const BLOCK_PTR = true;
+const BLOCK_HTTPS = true;
 
-let BLOCK_PRIVATE_TLD = true;
-let DNS_REDIRECT_ENABLED = true;
-let MULLVAD_UPSTREAM_ENABLED = true;
-let DEBUG_ENABLED = false;
-
-let configFetched = 0;
-async function loadConfig(baseUrl) {
-  if (Date.now() - configFetched < 60000) return;
-  try {
-    const res = await fetch(new URL(`/database/dns_gateway_config.json?t=${Date.now()}`, baseUrl).toString());
-    if (res.ok) {
-      const c = await res.json();
-      if (c.UPSTREAM_PRIMARY !== undefined) UPSTREAM_PRIMARY = c.UPSTREAM_PRIMARY;
-      if (c.UPSTREAM_FALLBACK !== undefined) UPSTREAM_FALLBACK = c.UPSTREAM_FALLBACK;
-      if (c.UPSTREAM_GEO_BYPASS !== undefined) UPSTREAM_GEO_BYPASS = c.UPSTREAM_GEO_BYPASS;
-      if (c.UPSTREAM_TIMEOUT !== undefined) UPSTREAM_TIMEOUT = c.UPSTREAM_TIMEOUT;
-      if (c.ALL_LISTS_REFRESH_INTERVAL !== undefined) ALL_LISTS_REFRESH_INTERVAL = c.ALL_LISTS_REFRESH_INTERVAL;
-      if (c.AD_BLOCK_ENABLED !== undefined) AD_BLOCK_ENABLED = c.AD_BLOCK_ENABLED;
-      if (c.ECS_INJECTION_ENABLED !== undefined) ECS_INJECTION_ENABLED = c.ECS_INJECTION_ENABLED;
-      if (c.ECS_PREFIX_V4 !== undefined) ECS_PREFIX_V4 = c.ECS_PREFIX_V4;
-      if (c.ECS_PREFIX_V6 !== undefined) ECS_PREFIX_V6 = c.ECS_PREFIX_V6;
-      if (c.BLOCK_ANY !== undefined) BLOCK_ANY = c.BLOCK_ANY;
-      if (c.BLOCK_AAAA !== undefined) BLOCK_AAAA = c.BLOCK_AAAA;
-      if (c.BLOCK_PTR !== undefined) BLOCK_PTR = c.BLOCK_PTR;
-      if (c.BLOCK_HTTPS !== undefined) BLOCK_HTTPS = c.BLOCK_HTTPS;
-      if (c.BLOCK_PRIVATE_TLD !== undefined) BLOCK_PRIVATE_TLD = c.BLOCK_PRIVATE_TLD;
-      if (c.DNS_REDIRECT_ENABLED !== undefined) DNS_REDIRECT_ENABLED = c.DNS_REDIRECT_ENABLED;
-      if (c.MULLVAD_UPSTREAM_ENABLED !== undefined) MULLVAD_UPSTREAM_ENABLED = c.MULLVAD_UPSTREAM_ENABLED;
-      if (c.DEBUG_ENABLED !== undefined) DEBUG_ENABLED = c.DEBUG_ENABLED;
-    }
-  } catch(e) {}
-  configFetched = Date.now();
-  globalBlockedQtypes = null; // force rebuild
-}
+const BLOCK_PRIVATE_TLD = true;
+const DNS_REDIRECT_ENABLED = true;
+const MULLVAD_UPSTREAM_ENABLED = true;
 
 let globalBlockedQtypes = null;
 function getBlockedQtypes() {
@@ -804,26 +773,9 @@ async function handleDNSQuery(request, context) {
 
 // ==================== ROUTING ====================
 async function handleRequest(request, context) {
-  await loadConfig(request.url);
   const path = new URL(request.url).pathname;
 
   if (path === '/dns-query') return handleDNSQuery(request, context);
-
-  if (path === '/debug') {
-    if (!DEBUG_ENABLED) return new Response('Not Found', { status: 404 });
-    if (AD_BLOCK_ENABLED || BLOCK_PRIVATE_TLD || DNS_REDIRECT_ENABLED) {
-      await ensureBlocklistsLoaded(request.url, context);
-    }
-    return new Response(JSON.stringify({
-      upstreams: { primary: UPSTREAM_PRIMARY, fallback: UPSTREAM_FALLBACK, geoBypass: UPSTREAM_GEO_BYPASS },
-      adBlock: { enabled: AD_BLOCK_ENABLED, blocklist: adBlocklist.size, allowlist: adAllowlist.size, lastFetch: blocklistLastFetch ? new Date(blocklistLastFetch).toISOString() : 'never' },
-      ecs: { enabled: ECS_INJECTION_ENABLED, prefixV4: `/${ECS_PREFIX_V4}`, prefixV6: `/${ECS_PREFIX_V6}` },
-      blockedTypes: { ANY: BLOCK_ANY, AAAA: BLOCK_AAAA, PTR: BLOCK_PTR, HTTPS: BLOCK_HTTPS },
-      privateTld: { enabled: BLOCK_PRIVATE_TLD, entries: privateTlds.size },
-      dnsRedirect: { enabled: DNS_REDIRECT_ENABLED, rules: redirectRules.size },
-      mullvadUpstream: { enabled: MULLVAD_UPSTREAM_ENABLED, entries: mullvadUpstreamDomains.size }
-    }, null, 2), { headers: { 'Content-Type': 'application/json' } });
-  }
 
   if (path === '/apple') {
     const host = new URL(request.url).hostname;
