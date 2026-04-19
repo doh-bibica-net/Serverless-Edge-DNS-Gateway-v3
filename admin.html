@@ -2271,28 +2271,39 @@
                 };
 
                 // Crypto utilities
-                const deriveKey = async (password) => {
+                const deriveKey = async (password, salt, iterations = 600000) => {
                     const enc = new TextEncoder();
                     const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), {name: 'PBKDF2'}, false, ['deriveKey']);
                     return crypto.subtle.deriveKey(
-                        {name: 'PBKDF2', salt: enc.encode('DNS-GW-SALT'), iterations: 100000, hash: 'SHA-256'},
+                        {name: 'PBKDF2', salt: salt, iterations: iterations, hash: 'SHA-256'},
                         keyMaterial, {name: 'AES-GCM', length: 256}, false, ['encrypt', 'decrypt']
                     );
                 };
 
                 const aesEncrypt = async (text, password) => {
-                    const key = await deriveKey(password);
+                    const salt = crypto.getRandomValues(new Uint8Array(16));
+                    const key = await deriveKey(password, salt, 600000);
                     const iv = crypto.getRandomValues(new Uint8Array(12));
                     const enc = new TextEncoder();
                     const cipher = await crypto.subtle.encrypt({name: 'AES-GCM', iv}, key, enc.encode(text));
                     const combined = new Uint8Array(iv.length + cipher.byteLength);
                     combined.set(iv, 0); combined.set(new Uint8Array(cipher), iv.length);
-                    return btoa(String.fromCharCode.apply(null, combined));
+                    return {
+                        data: btoa(String.fromCharCode.apply(null, combined)),
+                        salt: btoa(String.fromCharCode.apply(null, salt)),
+                        iterations: 600000
+                    };
                 };
 
-                const aesDecrypt = async (b64, password) => {
+                const aesDecrypt = async (b64, password, saltB64, iterations = 600000) => {
                     try {
-                        const key = await deriveKey(password);
+                        if (!saltB64) throw new Error('Missing salt for decryption');
+                        
+                        const saltRaw = atob(saltB64);
+                        const salt = new Uint8Array(saltRaw.length);
+                        for(let i=0; i<saltRaw.length; i++) salt[i] = saltRaw.charCodeAt(i);
+
+                        const key = await deriveKey(password, salt, iterations);
                         const raw = atob(b64);
                         const combined = new Uint8Array(raw.length);
                         for(let i=0; i<raw.length; i++) combined[i] = raw.charCodeAt(i);
@@ -2300,7 +2311,7 @@
                         const cipher = combined.slice(12);
                         const plain = await crypto.subtle.decrypt({name: 'AES-GCM', iv}, key, cipher);
                         return new TextDecoder().decode(plain);
-                    } catch { return null; }
+                    } catch (e) { console.error('Decrypt failed', e); return null; }
                 };
                 const register = async () => {
                     if (regPass.value !== regPass2.value) { authError.value = 'Passwords do not match'; return; }
@@ -2324,13 +2335,15 @@
                             return;
                         }
 
-                        const encrypted = await aesEncrypt(regPAT.value, regPass.value);
+                        const encryptedInfo = await aesEncrypt(regPAT.value, regPass.value);
                         const userObj = { 
                             needsSetup: false, 
                             username: regUser.value.trim(), 
                             owner: GITHUB_OWNER.value,
                             repo: GITHUB_REPO.value,
-                            encrypted_pat: encrypted 
+                            encrypted_pat: encryptedInfo.data,
+                            salt: encryptedInfo.salt,
+                            iterations: encryptedInfo.iterations
                         };
                         await githubPut('database/admin_user.json', JSON.stringify(userObj, null, 2));
 
@@ -2356,7 +2369,7 @@
                         if (loginUser.value.trim() !== u.username) { authError.value = 'Invalid username or password'; return; }
                         
                         // 2. Decrypt PAT with provided password
-                        const pat = await aesDecrypt(u.encrypted_pat, loginPass.value);
+                        const pat = await aesDecrypt(u.encrypted_pat, loginPass.value, u.salt, u.iterations);
                         if(pat) {
                             sessionPAT = pat; 
                             adminUsername.value = u.username;
