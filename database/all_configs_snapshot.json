@@ -13,9 +13,9 @@
     "BLOCK_AAAA": true,
     "BLOCK_PTR": true,
     "BLOCK_HTTPS": true,
-    "BLOCK_PRIVATE_TLD": true,
-    "DNS_REDIRECT_ENABLED": true,
-    "MULLVAD_UPSTREAM_ENABLED": true,
+    "BLOCK_PRIVATE_TLD": false,
+    "DNS_REDIRECT_ENABLED": false,
+    "MULLVAD_UPSTREAM_ENABLED": false,
     "DEBUG_ENABLED": false
   },
   "custom_lists": {
@@ -39,5 +39,5 @@
     "blocklist_text": "https://adguardteam.github.io/HostlistsRegistry/assets/filter_16.txt\nhttps://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt\nhttps://raw.githubusercontent.com/bibicadotnet/AdGuard-Home-blocklists/refs/heads/main/byme.txt\nhttps://raw.githubusercontent.com/VeleSila/yhosts/master/hosts\nhttps://badmojr.github.io/1Hosts/Lite/adblock.txt",
     "allowlist_text": "https://raw.githubusercontent.com/bibicadotnet/AdGuard-Home-blocklists/refs/heads/main/whitelist.txt"
   },
-  "_updated": 1776566503491
+  "_updated": 1776566646327
 }

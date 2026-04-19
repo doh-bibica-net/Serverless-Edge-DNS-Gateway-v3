@@ -22,15 +22,15 @@ const BLOCK_PTR = true;    // TYPE 12  — Reverse DNS
 const BLOCK_HTTPS = true;  // TYPE 65  — HTTPS record queries
 
 // Block private/internal TLDs and router domains
-const BLOCK_PRIVATE_TLD = true;
+const BLOCK_PRIVATE_TLD = false;
 const PRIVATE_TLD_URL = '/rules/private_tlds.txt';
 
 // DNS redirect/rewrite (local CNAME overrides)
-const DNS_REDIRECT_ENABLED = true;
+const DNS_REDIRECT_ENABLED = false;
 const REDIRECT_RULES_URL = '/rules/redirect_rules.txt';
 
 // Dedicated Mullvad Upstream Domains
-const MULLVAD_UPSTREAM_ENABLED = true;
+const MULLVAD_UPSTREAM_ENABLED = false;
 const MULLVAD_UPSTREAM_URL = '/rules/mullvad_upstream.txt';
 
 // CONFIG_END
