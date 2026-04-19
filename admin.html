@@ -1152,36 +1152,6 @@
             max-width: 100%;
         }
 
-        /* ===== GUIDE BOX ===== */
-        .guide-box {
-            background: var(--accent-m);
-            border: 1px solid var(--accent);
-            border-radius: 8px;
-            padding: 12px 16px;
-            margin-bottom: 20px;
-            display: flex;
-            gap: 12px;
-            animation: fadeIn 0.3s ease-out;
-        }
-
-        .guide-icon {
-            font-size: 18px;
-            color: var(--accent);
-            flex-shrink: 0;
-            padding-top: 2px;
-        }
-
-        .guide-content {
-            font-size: 13px;
-            color: var(--text-1);
-            line-height: 1.5;
-        }
-
-        .guide-content b {
-            font-weight: 600;
-            color: var(--accent);
-        }
-
         /* Enhanced Pulse Animation */
         @keyframes pulse-sync {
             0% { box-shadow: 0 0 0 0 var(--accent-m); transform: scale(1); }
@@ -1715,16 +1685,6 @@
 
                         <!-- ======= FEATURES ======= -->
                         <div v-if="tab==='features'">
-                            <div class="guide-box">
-                                <strong>⚡ Core Features Guide</strong>
-                                <ul>
-                                    <li><strong>Ad & Tracker Blocking:</strong> Uses community-maintained blocklists to block ads, trackers and malware domains at DNS level. Domains on the blocklist return NXDOMAIN.</li>
-                                    <li><strong>Block Private TLDs:</strong> Blocks internal/private domains like <code>.local</code>, <code>.internal</code>, and router IPs. Prevents DNS leaks of internal network queries.</li>
-                                    <li><strong>DNS Redirect:</strong> Rewrites DNS queries for specific domains to a different target (CNAME override). Useful for bypassing geo-blocks or network restrictions.</li>
-                                    <li><strong>Mullvad Upstream:</strong> Routes specific domains through Mullvad DNS for anonymous resolution. Useful for domains that route better without ECS geo-lock.</li>
-                                </ul>
-                                <div class="warn-text">⚠️ Changes take effect after saving and syncing to GitHub → Cloudflare.</div>
-                            </div>
                             <div class="card">
                                 <div class="card-head">
                                     <div>
@@ -1750,16 +1710,6 @@
 
                         <!-- ======= QUERY FILTERS ======= -->
                         <div v-if="tab==='filters'">
-                            <div class="guide-box">
-                                <strong>🔍 Query Type Filters Guide</strong>
-                                <ul>
-                                    <li><strong>Block ANY (TYPE 255):</strong> ANY queries are commonly used in DNS amplification attacks. Blocking them reduces abuse and saves resources.</li>
-                                    <li><strong>Block AAAA (TYPE 28):</strong> Blocks IPv6 address lookups. Useful if your network doesn't support IPv6 and you want to avoid unnecessary queries.</li>
-                                    <li><strong>Block PTR (TYPE 12):</strong> Blocks reverse DNS lookups (IP → domain). Prevents leaking internal IPs through DNS queries.</li>
-                                    <li><strong>Block HTTPS (TYPE 65):</strong> Blocks HTTPS/SVCB record queries. These are used for encrypted DNS discovery and may not be needed in all setups.</li>
-                                </ul>
-                                <div class="warn-text">⚠️ Blocked query types return NODATA (RCODE=0) at the edge, saving upstream requests and Cloudflare Pages request quota.</div>
-                            </div>
                             <div class="card">
                                 <div class="card-head">
                                     <div>
@@ -1785,16 +1735,6 @@
 
                         <!-- ======= UPSTREAMS ======= -->
                         <div v-if="tab==='upstreams'">
-                            <div class="guide-box">
-                                <strong>🌐 Upstream DNS Guide</strong>
-                                <ul>
-                                    <li><strong>DNS-over-HTTPS (DoH):</strong> Must start with <code>https://</code> and end with the query path (e.g., <code>/dns-query</code>).</li>
-                                    <li><strong>Timeout:</strong> Maximum wait time before trying the fallback upstream (typically 1500-3000ms).</li>
-                                    <li><strong>Refresh Interval:</strong> How often the gateway re-downloads and regenerates all blocklists and allowlists in the background.</li>
-                                    <li><strong>ECS Injection:</strong> Appends your client subnet to upstream queries to ensure you get the closest CDN IP address. Careful: can leak slightly more privacy.</li>
-                                </ul>
-                                <div class="warn-text">⚠️ Saving changes here stores them locally. Click "Review & Sync Changes" in the top bar to apply them.</div>
-                            </div>
                             <div class="card">
                                 <div class="card-head">
                                     <div class="card-title">DNS Upstream Servers</div>
@@ -1871,13 +1811,13 @@
                                 </div>
                             </div>
 
-                            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
-                                <button @click="resetUpstreams" class="btn">
-                                    Discard Changes
-                                </button>
-                                <button @click="saveUpstreams" class="btn btn-save" :disabled="saving">
+                            <div style="display: flex; justify-content: space-between; gap: 10px; margin-top: 15px;">
+                                <button @click="saveUpstreams" class="btn btn-save" :disabled="saving" style="order: 1">
                                     <span v-if="saving" class="spinner-small" style="width: 14px; height: 14px; border-top-color: currentColor; margin-right: 6px;"></span>
                                     Save Changes
+                                </button>
+                                <button @click="resetUpstreams" class="btn" style="order: 2">
+                                    Restore to Defaults
                                 </button>
                             </div>
                         </div>
@@ -2529,7 +2469,6 @@
                 const validateUrl = (url) => {
                     if (!url) return "Cannot be empty";
                     if (!url.startsWith('https://')) return "Must start with https://";
-                    if (!url.includes('/dns-query')) return "Must be a DoH endpoint (usually ends in /dns-query)";
                     try { new URL(url); } catch (e) { return "Invalid URL format"; }
                     return "";
                 };
