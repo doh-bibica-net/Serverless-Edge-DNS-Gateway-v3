@@ -2493,17 +2493,6 @@
                     return "";
                 };
 
-                const testDnsQuery = async (url) => {
-                    try {
-                        const testUrl = new URL(url);
-                        testUrl.searchParams.set('dns', 'q80BAAABAAAAAAAAA3d3dwdleGFtcGxlA2NvbQAAAQAB'); // Base64 for www.example.com A
-                        const res = await fetch(testUrl.toString(), {
-                            headers: { 'Accept': 'application/dns-message' },
-                            signal: AbortSignal.timeout(3000)
-                        });
-                        return res.ok;
-                    } catch (e) { return false; }
-                };
 
                 const saveUpstreams = async () => {
                     saving.value = true;
@@ -2527,14 +2516,6 @@
                         return;
                     }
 
-                    showToast('Testing primary DNS connection...', 'info');
-                    const primaryOk = await testDnsQuery(upstreamForm.value.UPSTREAM_PRIMARY);
-                    if (!primaryOk) {
-                        uvPrimary.value = "DNS test failed. Is DoH supported?";
-                        showToast('Failed to connect to primary resolver', 'error');
-                        saving.value = false;
-                        return;
-                    }
 
                     updateConfig({ 
                         UPSTREAM_PRIMARY: upstreamForm.value.UPSTREAM_PRIMARY, 
