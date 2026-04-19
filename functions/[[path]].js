@@ -7,7 +7,7 @@ const UPSTREAM_TIMEOUT = 5000;
 // Refresh interval for ALL lists (blocklist, allowlists, private TLDs, redirect rules)
 const ALL_LISTS_REFRESH_INTERVAL = 3600000; // 1 hour
 
-const AD_BLOCK_ENABLED = false;
+const AD_BLOCK_ENABLED = true;
 const BLOCKLIST_URL = '/rules/blocklists.txt';
 const ALLOWLIST_URL = '/rules/allowlists.txt';
 
@@ -16,21 +16,21 @@ const ECS_PREFIX_V4 = 24;
 const ECS_PREFIX_V6 = 48;
 
 // Block query types early to save Cloudflare Pages requests
-const BLOCK_ANY = false;    // TYPE 255 — ANY queries
-const BLOCK_AAAA = false;   // TYPE 28  — IPv6 queries
-const BLOCK_PTR = false;    // TYPE 12  — Reverse DNS
-const BLOCK_HTTPS = false;  // TYPE 65  — HTTPS record queries
+const BLOCK_ANY = true;    // TYPE 255 — ANY queries
+const BLOCK_AAAA = true;   // TYPE 28  — IPv6 queries
+const BLOCK_PTR = true;    // TYPE 12  — Reverse DNS
+const BLOCK_HTTPS = true;  // TYPE 65  — HTTPS record queries
 
 // Block private/internal TLDs and router domains
-const BLOCK_PRIVATE_TLD = false;
+const BLOCK_PRIVATE_TLD = true;
 const PRIVATE_TLD_URL = '/rules/private_tlds.txt';
 
 // DNS redirect/rewrite (local CNAME overrides)
-const DNS_REDIRECT_ENABLED = false;
+const DNS_REDIRECT_ENABLED = true;
 const REDIRECT_RULES_URL = '/rules/redirect_rules.txt';
 
 // Dedicated Mullvad Upstream Domains
-const MULLVAD_UPSTREAM_ENABLED = false;
+const MULLVAD_UPSTREAM_ENABLED = true;
 const MULLVAD_UPSTREAM_URL = '/rules/mullvad_upstream.txt';
 
 // CONFIG_END
