@@ -1,16 +1,13 @@
 #!/bin/bash
 
-# Định nghĩa đường dẫn tương đối trong Github Workspace
 DIR="rules"
 BLOCK_OUT="./$DIR/blocklists.txt"
 ALLOW_OUT="./$DIR/allowlists.txt"
 BLOCK_TMP="/tmp/blocklists.tmp"
 ALLOW_TMP="/tmp/allowlists.tmp"
 
-# Tạo thư mục rules nếu chưa có
 mkdir -p "./$DIR"
 
-# Cleanup khi script exit
 trap "rm -f $BLOCK_TMP $ALLOW_TMP; exit" INT TERM EXIT
 
 extract_domains() {
@@ -34,8 +31,7 @@ echo "Downloading and processing blocklists..."
   # EXTERNAL_BLOCKLIST_START
 # No external blocklists
 # EXTERNAL_BLOCKLIST_END
-  
-  # Gộp thêm domain mày gõ tay trên Admin
+
   if [ -f "rules/custom_blocklists.txt" ]; then
     cat "rules/custom_blocklists.txt"
   fi
@@ -46,20 +42,17 @@ echo "Downloading and processing allowlists..."
   # EXTERNAL_ALLOWLIST_START
 # No external allowlists
 # EXTERNAL_ALLOWLIST_END
-  
-  # Gộp thêm domain mày gõ tay trên Admin
+
   if [ -f "rules/custom_allowlists.txt" ]; then
     cat "rules/custom_allowlists.txt"
   fi
 } | extract_domains > "$ALLOW_TMP"
 
-# Di chuyển file tmp vào thư mục đích
 mv "$BLOCK_TMP" "$BLOCK_OUT"
 mv "$ALLOW_TMP" "$ALLOW_OUT"
 
 echo "Done. Files saved to $BLOCK_OUT and $ALLOW_OUT"
 
-# Chỉ sinh stats cho các list nặng (quảng cáo)
 BLOCK_COUNT=$(wc -l < "$BLOCK_OUT" | tr -d ' ' || echo 0)
 ALLOW_COUNT=$(wc -l < "$ALLOW_OUT" | tr -d ' ' || echo 0)
 
