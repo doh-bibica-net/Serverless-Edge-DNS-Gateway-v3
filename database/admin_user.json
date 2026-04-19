@@ -1,1 +1,9 @@
-
+{
+  "needsSetup": false,
+  "username": "bibica",
+  "owner": "doh-bibica-net",
+  "repo": "Serverless-Edge-DNS-Gateway-v3",
+  "encrypted_pat": "4MAfCmWJU+hUAWoXdKlkSJHvXt6z9ASYu5p9DOujZkSYgqY94mPusYkN+4uqsddgQTEXw9V2dRs8vcJnJssaVi3JGlA=",
+  "salt": "BJlUgK4xv74tms5IBpvgzg==",
+  "iterations": 600000
+}
