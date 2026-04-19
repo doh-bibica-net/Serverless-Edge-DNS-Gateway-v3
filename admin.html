@@ -2115,6 +2115,9 @@
                     DEBUG_ENABLED: false
                 };
 
+                // Upstreams UI State
+                const upstreamForm = ref({ ...DEFAULT_CONFIG });
+
                 // Form Validation errors
                 const uvPrimary = ref(''); const uvFallback = ref(''); const uvGeo = ref('');
                 const uvTimeout = ref(''); const uvInterval = ref('');
@@ -2455,16 +2458,7 @@
                         }
 
                         // Init local form
-                        upstreamForm.value = {
-                            UPSTREAM_PRIMARY: config.value.UPSTREAM_PRIMARY,
-                            UPSTREAM_FALLBACK: config.value.UPSTREAM_FALLBACK,
-                            UPSTREAM_GEO_BYPASS: config.value.UPSTREAM_GEO_BYPASS,
-                            UPSTREAM_TIMEOUT: config.value.UPSTREAM_TIMEOUT,
-                            ALL_LISTS_REFRESH_INTERVAL: config.value.ALL_LISTS_REFRESH_INTERVAL,
-                            ECS_INJECTION_ENABLED: !!config.value.ECS_INJECTION_ENABLED,
-                            ECS_PREFIX_V4: config.value.ECS_PREFIX_V4,
-                            ECS_PREFIX_V6: config.value.ECS_PREFIX_V6
-                        };
+                        upstreamForm.value = { ...config.value };
 
                         stats.value = await githubGet('database/stats.json') || { lastFetch: new Date().toISOString() };
                         
@@ -2531,13 +2525,7 @@
                 };
 
                 const resetUpstreams = () => { 
-                    upstreamForm.value = {
-                        UPSTREAM_PRIMARY: 'https://bu0eg1tdzu.cloudflare-gateway.com/dns-query',
-                        UPSTREAM_FALLBACK: 'https://rhpcv957tj.cloudflare-gateway.com/dns-query',
-                        UPSTREAM_GEO_BYPASS: 'https://dns.mullvad.net/dns-query',
-                        UPSTREAM_TIMEOUT: 5000, ALL_LISTS_REFRESH_INTERVAL: 3600000,
-                        ECS_INJECTION_ENABLED: true, ECS_PREFIX_V4: 24, ECS_PREFIX_V6: 48
-                    };
+                    upstreamForm.value = { ...DEFAULT_CONFIG };
                     clearUv('primary'); clearUv('fallback'); clearUv('geo');
                     clearUv('timeout'); clearUv('interval'); clearUv('v4'); clearUv('v6');
                     showToast('Reset local form to defaults. Click Save Changes to commit.', 'info'); 
