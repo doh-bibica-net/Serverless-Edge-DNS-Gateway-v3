@@ -2265,7 +2265,14 @@
                     });
                     if(res.ok) {
                         const d = await res.json();
-                        return JSON.parse(decodeURIComponent(escape(atob(d.content))));
+                        const decoded = decodeURIComponent(escape(atob(d.content.replace(/\s/g, ''))));
+                        if (!decoded || decoded.trim() === "") return null;
+                        try {
+                            return JSON.parse(decoded);
+                        } catch (e) {
+                            console.error(`Error parsing JSON from ${path}:`, e);
+                            return null;
+                        }
                     }
                     return null;
                 };
