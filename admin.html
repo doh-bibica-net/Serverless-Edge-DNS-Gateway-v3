@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Administration dashboard for Serverless Edge DNS Gateway. Manage upstreams, blocklists, and custom DNS rules at the edge.">
     <title>Admin — Serverless Edge DNS Gateway</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <style>
@@ -294,7 +295,7 @@
         /* ===== DASHBOARD ===== */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(5, 1fr);
             gap: 14px;
             margin-bottom: 20px;
         }
@@ -736,6 +737,143 @@
             text-align: center;
         }
 
+        /* ===== REVIEW MODAL ===== */
+        .review-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+            animation: fadeIn 0.15s ease-out;
+        }
+
+        .review-modal {
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            width: 100%;
+            max-width: 520px;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.2);
+            animation: slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        .review-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            font-size: 17px;
+            font-weight: 600;
+        }
+
+        .review-header-sub {
+            font-size: 12px;
+            color: var(--text-2);
+            font-weight: 400;
+            margin-top: 4px;
+        }
+
+        .review-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 0;
+        }
+
+        .review-empty {
+            padding: 40px;
+            text-align: center;
+            color: var(--text-3);
+            font-size: 14px;
+        }
+
+        .review-category {
+            padding: 12px 24px 6px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text-3);
+        }
+
+        .review-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 10px 24px;
+            cursor: pointer;
+            transition: background 0.1s;
+            user-select: none;
+        }
+
+        .review-item:hover {
+            background: var(--bg-2);
+        }
+
+        .review-item.excluded {
+            opacity: 0.45;
+            filter: grayscale(1);
+        }
+
+        .review-item-check {
+            width: 18px;
+            height: 18px;
+            border: 1.5px solid var(--border);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: transparent;
+            margin-top: 2px;
+            transition: all 0.1s;
+        }
+
+        .review-item-check.checked {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        .review-item-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .review-item-label {
+            font-size: 13.5px;
+            font-weight: 500;
+            color: var(--text-1);
+        }
+
+        .review-item-detail {
+            font-size: 12px;
+            color: var(--text-2);
+            font-family: 'SF Mono', 'Cascadia Code', monospace;
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .review-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            background: var(--bg-2);
+            border-bottom-left-radius: 12px;
+            border-bottom-right-radius: 12px;
+        }
+
         /* ===== NOTIFICATION LOGS ===== */
         .log-dropdown {
             position: absolute;
@@ -1014,6 +1152,49 @@
             max-width: 100%;
         }
 
+        /* ===== GUIDE BOX ===== */
+        .guide-box {
+            background: var(--accent-m);
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 12px;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .guide-icon {
+            font-size: 18px;
+            color: var(--accent);
+            flex-shrink: 0;
+            padding-top: 2px;
+        }
+
+        .guide-content {
+            font-size: 13px;
+            color: var(--text-1);
+            line-height: 1.5;
+        }
+
+        .guide-content b {
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        /* Enhanced Pulse Animation */
+        @keyframes pulse-sync {
+            0% { box-shadow: 0 0 0 0 var(--accent-m); transform: scale(1); }
+            50% { box-shadow: 0 0 0 8px rgba(9, 105, 218, 0); transform: scale(1.02); }
+            100% { box-shadow: 0 0 0 0 rgba(9, 105, 218, 0); transform: scale(1); }
+        }
+        .pulse-accent { 
+            animation: pulse-sync 2s infinite; 
+            background: var(--accent-em) !important; 
+            border-color: var(--accent-em) !important;
+            color: #fff !important; 
+        }
+
         /* Upstream info */
         .upstream-table {
             width: 100%;
@@ -1137,6 +1318,81 @@
             border-color: #ef4444 !important;
             animation: pulse-red 2s infinite;
         }
+
+        /* ===== GUIDE BOX ===== */
+        .guide-box {
+            background: var(--accent-m);
+            border: 1px solid rgba(56, 139, 253, 0.25);
+            border-radius: 8px;
+            padding: 14px 18px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            line-height: 1.6;
+            color: var(--text-2);
+        }
+        .guide-box strong { color: var(--text-1); }
+        .guide-box ul { margin: 8px 0 0 18px; }
+        .guide-box li { margin-bottom: 4px; }
+        .guide-box .warn-text { color: var(--warn); margin-top: 8px; }
+
+        /* ===== VALIDATION ===== */
+        .fi.fi-error { border-color: var(--err) !important; }
+        .fi.fi-error:focus { box-shadow: 0 0 0 3px var(--err-m) !important; }
+        .fi.fi-ok { border-color: var(--ok) !important; }
+        .validation-msg { font-size: 12px; margin-top: 4px; }
+        .validation-msg.v-error { color: var(--err); }
+        .validation-msg.v-ok { color: var(--ok); }
+
+        /* ===== REVIEW MODAL ===== */
+        .review-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 200; backdrop-filter: blur(4px);
+        }
+        .review-modal {
+            background: var(--bg-1); border: 1px solid var(--border);
+            border-radius: 12px; width: 100%; max-width: 640px;
+            max-height: 80vh; display: flex; flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        }
+        .review-header {
+            padding: 20px 24px; border-bottom: 1px solid var(--border);
+            font-size: 16px; font-weight: 600;
+        }
+        .review-header-sub { font-size: 13px; color: var(--text-2); font-weight: 400; margin-top: 4px; }
+        .review-body { flex: 1; overflow-y: auto; padding: 16px 24px; }
+        .review-category {
+            font-size: 11px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.8px; color: var(--text-3); margin: 16px 0 8px;
+        }
+        .review-category:first-child { margin-top: 0; }
+        .review-item {
+            display: flex; align-items: flex-start; gap: 10px;
+            padding: 10px 12px; border-radius: 6px; margin-bottom: 4px;
+            background: var(--bg-2); border: 1px solid var(--border-s);
+            font-size: 13px; cursor: pointer; user-select: none;
+            transition: all var(--tr);
+        }
+        .review-item:hover { background: var(--bg-3); }
+        .review-item.excluded { opacity: 0.4; }
+        .review-item-check {
+            width: 18px; height: 18px; border-radius: 4px;
+            border: 2px solid var(--border); flex-shrink: 0; margin-top: 1px;
+            display: flex; align-items: center; justify-content: center;
+            transition: all var(--tr); font-size: 11px;
+        }
+        .review-item-check.checked { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .review-item-info { flex: 1; min-width: 0; }
+        .review-item-label { font-weight: 500; }
+        .review-item-detail {
+            font-size: 12px; color: var(--text-3); margin-top: 2px;
+            font-family: monospace; word-break: break-all;
+        }
+        .review-footer {
+            padding: 16px 24px; border-top: 1px solid var(--border);
+            display: flex; justify-content: flex-end; gap: 8px;
+        }
+        .review-empty { text-align: center; padding: 24px; color: var(--text-3); font-size: 13px; }
     </style>
 </head>
 
@@ -1345,10 +1601,10 @@
                             </button>
                             
                             <!-- UNIFIED SAVE & SYNC BUTTON -->
-                            <button @click="hasChanges ? saveAll() : forceSync()" class="btn btn-save" 
+                            <button @click="hasChanges ? prepareSync() : forceSync()" class="btn btn-save" 
                                 :class="{'pulse-red': hasChanges && syncState === 'idle'}" 
                                 :disabled="syncState !== 'idle' || syncing"
-                                :title="hasChanges ? 'Save Changes' : 'Force Sync Lists'"
+                                :title="hasChanges ? 'Review & Sync Changes' : 'Force Sync Lists'"
                                 style="padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
                                 <svg v-if="!(syncState !== 'idle' || syncing)" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"></path>
@@ -1369,25 +1625,6 @@
 
                             <!-- Stats row -->
                             <div class="stats-grid">
-                                <div class="stat-card">
-                                    <div class="stat-label">Active Features</div>
-                                    <div class="stat-value">{{ activeFeatureCount }}<small>/{{ features.length
-                                            }}</small>
-                                    </div>
-                                    <div class="stat-sub">Core capabilities</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-label">Active Upstreams</div>
-                                    <div class="stat-value">{{ config.ECS_INJECTION_ENABLED ? 1 : 0 }}<small>/1</small>
-                                    </div>
-                                    <div class="stat-sub">ECS capabilities (Upstreams)</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-label">Active Filters</div>
-                                    <div class="stat-value">{{ activeFilterCount }}<small>/{{ filters.length }}</small>
-                                    </div>
-                                    <div class="stat-sub">Query type filters</div>
-                                </div>
                                 <div class="stat-card ok">
                                     <div class="stat-label">Blocklist</div>
                                     <div class="stat-value">{{ fmt(stats.blocklistSize) }}</div>
@@ -1398,6 +1635,11 @@
                                     <div class="stat-value">{{ fmt(stats.allowlistSize) }}</div>
                                     <div class="stat-sub">Active safe domains</div>
                                 </div>
+                                <div class="stat-card warn">
+                                    <div class="stat-label">Redirect Rules</div>
+                                    <div class="stat-value">{{ fmt((lists.redirect_rules||[]).length) }}</div>
+                                    <div class="stat-sub">Staged CNAME overrides</div>
+                                </div>
                                 <div class="stat-card err">
                                     <div class="stat-label">Private TLDs</div>
                                     <div class="stat-value">{{ fmt((lists.private_tlds||[]).length) }}</div>
@@ -1407,11 +1649,6 @@
                                     <div class="stat-label">Mullvad</div>
                                     <div class="stat-value">{{ fmt((lists.mullvad_upstream||[]).length) }}</div>
                                     <div class="stat-sub">Staged upstream domains</div>
-                                </div>
-                                <div class="stat-card warn">
-                                    <div class="stat-label">Redirect Rules</div>
-                                    <div class="stat-value">{{ fmt((lists.redirect_rules||[]).length) }}</div>
-                                    <div class="stat-sub">Staged CNAME overrides</div>
                                 </div>
                             </div>
 
@@ -1478,6 +1715,16 @@
 
                         <!-- ======= FEATURES ======= -->
                         <div v-if="tab==='features'">
+                            <div class="guide-box">
+                                <strong>⚡ Core Features Guide</strong>
+                                <ul>
+                                    <li><strong>Ad & Tracker Blocking:</strong> Uses community-maintained blocklists to block ads, trackers and malware domains at DNS level. Domains on the blocklist return NXDOMAIN.</li>
+                                    <li><strong>Block Private TLDs:</strong> Blocks internal/private domains like <code>.local</code>, <code>.internal</code>, and router IPs. Prevents DNS leaks of internal network queries.</li>
+                                    <li><strong>DNS Redirect:</strong> Rewrites DNS queries for specific domains to a different target (CNAME override). Useful for bypassing geo-blocks or network restrictions.</li>
+                                    <li><strong>Mullvad Upstream:</strong> Routes specific domains through Mullvad DNS for anonymous resolution. Useful for domains that route better without ECS geo-lock.</li>
+                                </ul>
+                                <div class="warn-text">⚠️ Changes take effect after saving and syncing to GitHub → Cloudflare.</div>
+                            </div>
                             <div class="card">
                                 <div class="card-head">
                                     <div>
@@ -1503,13 +1750,21 @@
 
                         <!-- ======= QUERY FILTERS ======= -->
                         <div v-if="tab==='filters'">
+                            <div class="guide-box">
+                                <strong>🔍 Query Type Filters Guide</strong>
+                                <ul>
+                                    <li><strong>Block ANY (TYPE 255):</strong> ANY queries are commonly used in DNS amplification attacks. Blocking them reduces abuse and saves resources.</li>
+                                    <li><strong>Block AAAA (TYPE 28):</strong> Blocks IPv6 address lookups. Useful if your network doesn't support IPv6 and you want to avoid unnecessary queries.</li>
+                                    <li><strong>Block PTR (TYPE 12):</strong> Blocks reverse DNS lookups (IP → domain). Prevents leaking internal IPs through DNS queries.</li>
+                                    <li><strong>Block HTTPS (TYPE 65):</strong> Blocks HTTPS/SVCB record queries. These are used for encrypted DNS discovery and may not be needed in all setups.</li>
+                                </ul>
+                                <div class="warn-text">⚠️ Blocked query types return NODATA (RCODE=0) at the edge, saving upstream requests and Cloudflare Pages request quota.</div>
+                            </div>
                             <div class="card">
                                 <div class="card-head">
                                     <div>
                                         <div class="card-title">Blocked Query Types</div>
-                                        <div class="card-desc">Block specific DNS record types at the edge before
-                                            upstream
-                                            forwarding</div>
+                                        <div class="card-desc">Block specific DNS record types at the edge before upstream forwarding</div>
                                     </div>
                                     <span class="badge badge-i">{{ activeFilterCount }}/{{ filters.length }}
                                         active</span>
@@ -1530,40 +1785,52 @@
 
                         <!-- ======= UPSTREAMS ======= -->
                         <div v-if="tab==='upstreams'">
+                            <div class="guide-box">
+                                <strong>🌐 Upstream DNS Guide</strong>
+                                <ul>
+                                    <li><strong>DNS-over-HTTPS (DoH):</strong> Must start with <code>https://</code> and end with the query path (e.g., <code>/dns-query</code>).</li>
+                                    <li><strong>Timeout:</strong> Maximum wait time before trying the fallback upstream (typically 1500-3000ms).</li>
+                                    <li><strong>Refresh Interval:</strong> How often the gateway re-downloads and regenerates all blocklists and allowlists in the background.</li>
+                                    <li><strong>ECS Injection:</strong> Appends your client subnet to upstream queries to ensure you get the closest CDN IP address. Careful: can leak slightly more privacy.</li>
+                                </ul>
+                                <div class="warn-text">⚠️ Saving changes here stores them locally. Click "Review & Sync Changes" in the top bar to apply them.</div>
+                            </div>
                             <div class="card">
                                 <div class="card-head">
                                     <div class="card-title">DNS Upstream Servers</div>
-                                    <span class="badge badge-i">{{ config.ECS_INJECTION_ENABLED ? 1 : 0 }}/1
+                                    <span class="badge badge-i">{{ upstreamForm.ECS_INJECTION_ENABLED ? 1 : 0 }}/1
                                         active</span>
                                 </div>
                                 <div class="card-body">
-                                    <div class="fg"><label class="fl">Primary Upstream</label><input class="fi fi-mono"
-                                            v-model="config.UPSTREAM_PRIMARY">
+                                    <div class="fg">
+                                        <label class="fl">Primary Upstream</label>
+                                        <input class="fi fi-mono" :class="{'fi-error': uvPrimary}" v-model="upstreamForm.UPSTREAM_PRIMARY" @input="clearUv('primary')">
                                         <div class="fh">Main DNS-over-HTTPS resolver (DoH)</div>
+                                        <div v-if="uvPrimary" class="validation-msg v-error">{{ uvPrimary }}</div>
                                     </div>
-                                    <div class="fg"><label class="fl">Fallback Upstream</label><input class="fi fi-mono"
-                                            v-model="config.UPSTREAM_FALLBACK">
-                                        <div class="fh">Used when primary times out or fails</div>
+                                    <div class="fg">
+                                        <label class="fl">Fallback Upstream</label>
+                                        <input class="fi fi-mono" :class="{'fi-error': uvFallback}" v-model="upstreamForm.UPSTREAM_FALLBACK" @input="clearUv('fallback')">
+                                        <div class="fh">Used when primary times out or fails (DoH)</div>
+                                        <div v-if="uvFallback" class="validation-msg v-error">{{ uvFallback }}</div>
                                     </div>
-                                    <div class="fg"><label class="fl">Geo-Bypass Upstream</label><input
-                                            class="fi fi-mono" v-model="config.UPSTREAM_GEO_BYPASS">
-                                        <div class="fh">Re-resolve without ECS for geo-blocked domains returning
-                                            loopback
-                                        </div>
+                                    <div class="fg">
+                                        <label class="fl">Geo-Bypass Upstream</label>
+                                        <input class="fi fi-mono" :class="{'fi-error': uvGeo}" v-model="upstreamForm.UPSTREAM_GEO_BYPASS" @input="clearUv('geo')">
+                                        <div class="fh">Re-resolve without ECS for geo-blocked domains returning loopback</div>
+                                        <div v-if="uvGeo" class="validation-msg v-error">{{ uvGeo }}</div>
                                     </div>
                                     <div class="frow">
                                         <div class="fg">
                                             <label class="fl">Timeout (ms)</label>
-                                            <input class="fi" type="number" v-model.number="config.UPSTREAM_TIMEOUT">
+                                            <input class="fi" :class="{'fi-error': uvTimeout}" type="number" v-model.number="upstreamForm.UPSTREAM_TIMEOUT" @input="clearUv('timeout')">
+                                            <div v-if="uvTimeout" class="validation-msg v-error">{{ uvTimeout }}</div>
                                         </div>
                                         <div class="fg">
-                                            <label class="fl">List Refresh Interval (ms)</label>
-                                            <input class="fi" type="number"
-                                                v-model.number="config.ALL_LISTS_REFRESH_INTERVAL">
-                                            <div class="fh">= {{
-                                                Math.round((config.ALL_LISTS_REFRESH_INTERVAL||3600000)/60000) }}
-                                                minutes
-                                            </div>
+                                            <label class="fl">All Lists Refresh Interval (ms)</label>
+                                            <input class="fi" :class="{'fi-error': uvInterval}" type="number" v-model.number="upstreamForm.ALL_LISTS_REFRESH_INTERVAL" @input="clearUv('interval')">
+                                            <div class="fh">= {{ Math.round((upstreamForm.ALL_LISTS_REFRESH_INTERVAL||3600000)/60000) }} minutes</div>
+                                            <div v-if="uvInterval" class="validation-msg v-error">{{ uvInterval }}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -1582,44 +1849,35 @@
                                             </div>
                                         </div>
                                         <div class="toggle"
-                                            :class="{on: config.ECS_INJECTION_ENABLED, disabled: saving}"
-                                            @click="toggleFeature('ECS_INJECTION_ENABLED')"></div>
+                                            :class="{on: upstreamForm.ECS_INJECTION_ENABLED, disabled: saving}"
+                                            @click="upstreamForm.ECS_INJECTION_ENABLED = !upstreamForm.ECS_INJECTION_ENABLED"></div>
                                     </div>
                                     <div class="frow">
                                         <div class="fg">
                                             <label class="fl">IPv4 Prefix Length</label>
-                                            <input class="fi" type="number" v-model.number="config.ECS_PREFIX_V4"
-                                                min="1" max="32">
-                                            <div class="fh">/{{ config.ECS_PREFIX_V4 || 24 }} mask sent to upstream
-                                            </div>
+                                            <input class="fi" :class="{'fi-error': uvV4}" type="number" v-model.number="upstreamForm.ECS_PREFIX_V4"
+                                                min="1" max="32" @input="clearUv('v4')">
+                                            <div class="fh">/{{ upstreamForm.ECS_PREFIX_V4 || 24 }} mask sent to upstream</div>
+                                            <div v-if="uvV4" class="validation-msg v-error">{{ uvV4 }}</div>
                                         </div>
                                         <div class="fg">
                                             <label class="fl">IPv6 Prefix Length</label>
-                                            <input class="fi" type="number" v-model.number="config.ECS_PREFIX_V6"
-                                                min="1" max="128">
-                                            <div class="fh">/{{ config.ECS_PREFIX_V6 || 48 }} mask sent to upstream
-                                            </div>
+                                            <input class="fi" :class="{'fi-error': uvV6}" type="number" v-model.number="upstreamForm.ECS_PREFIX_V6"
+                                                min="1" max="128" @input="clearUv('v6')">
+                                            <div class="fh">/{{ upstreamForm.ECS_PREFIX_V6 || 48 }} mask sent to upstream</div>
+                                            <div v-if="uvV6" class="validation-msg v-error">{{ uvV6 }}</div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div style="display: flex; justify-content: space-between; margin-top: 15px;">
-                                <button @click="saveUpstreams" class="btn btn-save">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                        stroke-width="2">
-                                        <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
-                                        <polyline points="17 21 17 13 7 13 7 21" />
-                                        <polyline points="7 3 7 8 15 8" />
-                                    </svg>
-                                    Stage Upstream Changes
+                            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+                                <button @click="resetUpstreams" class="btn">
+                                    Discard Changes
                                 </button>
-                                <button @click="resetUpstreams" class="btn btn-s">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                                        <path d="M3 3v5h5" />
-                                    </svg>
-                                    Reset to Defaults
+                                <button @click="saveUpstreams" class="btn btn-save" :disabled="saving">
+                                    <span v-if="saving" class="spinner-small" style="width: 14px; height: 14px; border-top-color: currentColor; margin-right: 6px;"></span>
+                                    Save Changes
                                 </button>
                             </div>
                         </div>
@@ -1787,6 +2045,43 @@
                             </div> <!-- close listsLoading else -->
                         </div>
 
+                    <!-- REVIEW MODAL OVERLAY -->
+                    <div v-if="showReviewModal" class="review-overlay" @click.self="showReviewModal = false">
+                        <div class="review-modal">
+                            <div class="review-header">
+                                Review Changes
+                                <div class="review-header-sub">Review precisely which configurations will be committed to GitHub and deployed.</div>
+                            </div>
+                            <div class="review-body">
+                                <div v-if="reviewDiff.length === 0" class="review-empty">
+                                    No staged changes found.
+                                </div>
+                                <template v-else>
+                                    <template v-for="(group, key) in groupedReviewDiff" :key="key">
+                                        <div v-if="group.length > 0" class="review-category">{{ key }}</div>
+                                        <div v-for="item in group" :key="item.id" 
+                                            class="review-item" 
+                                            :class="{excluded: !item.selected}"
+                                            @click="item.selected = !item.selected">
+                                            <div class="review-item-check" :class="{checked: item.selected}">✓</div>
+                                            <div class="review-item-info">
+                                                <div class="review-item-label">{{ item.label }}</div>
+                                                <div v-if="item.detail" class="review-item-detail">{{ item.detail }}</div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </template>
+                            </div>
+                            <div class="review-footer">
+                                <button class="btn" @click="showReviewModal = false" :disabled="syncing">Cancel</button>
+                                <button class="btn btn-save" @click="executeSync" :disabled="syncing || selectedDiffCount === 0">
+                                    <span v-if="syncing" class="spinner-small" style="width: 14px; height: 14px; border-top-color: currentColor; margin-right: 6px;"></span>
+                                    {{ syncing ? 'Syncing...' : 'Confirm & Sync' }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     </div><!-- /content-inner -->
                 </div><!-- /content -->
             </div><!-- /main -->
@@ -1853,6 +2148,39 @@
                     }
                     return 'GitHub Status: Unknown';
                 });
+
+                // Upstreams UI State
+                const upstreamForm = ref({
+                    UPSTREAM_PRIMARY: '', UPSTREAM_FALLBACK: '', UPSTREAM_GEO_BYPASS: '',
+                    UPSTREAM_TIMEOUT: 5000, ALL_LISTS_REFRESH_INTERVAL: 3600000,
+                    ECS_INJECTION_ENABLED: true, ECS_PREFIX_V4: 24, ECS_PREFIX_V6: 48
+                });
+                
+                // Form Validation errors
+                const uvPrimary = ref(''); const uvFallback = ref(''); const uvGeo = ref('');
+                const uvTimeout = ref(''); const uvInterval = ref('');
+                const uvV4 = ref(''); const uvV6 = ref('');
+                const clearUv = (field) => {
+                    if (field==='primary') uvPrimary.value='';
+                    if (field==='fallback') uvFallback.value='';
+                    if (field==='geo') uvGeo.value='';
+                    if (field==='timeout') uvTimeout.value='';
+                    if (field==='interval') uvInterval.value='';
+                    if (field==='v4') uvV4.value='';
+                    if (field==='v6') uvV6.value='';
+                };
+
+                // Review Modal State
+                const showReviewModal = ref(false);
+                const reviewDiff = ref([]);
+                const groupedReviewDiff = computed(() => {
+                    return reviewDiff.value.reduce((acc, item) => {
+                        if (!acc[item.category]) acc[item.category] = [];
+                        acc[item.category].push(item);
+                        return acc;
+                    }, {});
+                });
+                const selectedDiffCount = computed(() => reviewDiff.value.filter(i => i.selected).length);
 
                 const notifications = ref([]);
                 const showNotifications = ref(false);
@@ -2164,6 +2492,18 @@
                             customUrls.value = { blocklist: [], allowlist: [] };
                         }
 
+                        // Init local form
+                        upstreamForm.value = {
+                            UPSTREAM_PRIMARY: config.value.UPSTREAM_PRIMARY || 'https://bu0eg1tdzu.cloudflare-gateway.com/dns-query',
+                            UPSTREAM_FALLBACK: config.value.UPSTREAM_FALLBACK || 'https://rhpcv957tj.cloudflare-gateway.com/dns-query',
+                            UPSTREAM_GEO_BYPASS: config.value.UPSTREAM_GEO_BYPASS || 'https://dns.mullvad.net/dns-query',
+                            UPSTREAM_TIMEOUT: config.value.UPSTREAM_TIMEOUT || 5000,
+                            ALL_LISTS_REFRESH_INTERVAL: config.value.ALL_LISTS_REFRESH_INTERVAL || 3600000,
+                            ECS_INJECTION_ENABLED: !!config.value.ECS_INJECTION_ENABLED,
+                            ECS_PREFIX_V4: config.value.ECS_PREFIX_V4 || 24,
+                            ECS_PREFIX_V6: config.value.ECS_PREFIX_V6 || 48
+                        };
+
                         stats.value = await githubGet('database/stats.json') || { lastFetch: new Date().toISOString() };
                         
                         initialSnapshot.value = JSON.stringify({ c: config.value, cd: lists.value, u: customUrls.value });
@@ -2186,8 +2526,82 @@
                     updateConfig({ [k]: newState }, `${label} ${newState ? 'enabled ✅' : 'disabled ❌'}`);
                 };
                 
-                const saveUpstreams = () => updateConfig({ UPSTREAM_PRIMARY: config.value.UPSTREAM_PRIMARY, UPSTREAM_FALLBACK: config.value.UPSTREAM_FALLBACK, UPSTREAM_GEO_BYPASS: config.value.UPSTREAM_GEO_BYPASS, UPSTREAM_TIMEOUT: parseInt(config.value.UPSTREAM_TIMEOUT)||5000, ECS_PREFIX_V4: parseInt(config.value.ECS_PREFIX_V4)||24, ECS_PREFIX_V6: parseInt(config.value.ECS_PREFIX_V6)||48, ALL_LISTS_REFRESH_INTERVAL: parseInt(config.value.ALL_LISTS_REFRESH_INTERVAL)||3600000 }, 'Upstream DNS configurations staged 🔧');
-                const resetUpstreams = () => { config.value.UPSTREAM_PRIMARY = 'https://bu0eg1tdzu.cloudflare-gateway.com/dns-query'; config.value.UPSTREAM_FALLBACK = 'https://rhpcv957tj.cloudflare-gateway.com/dns-query'; config.value.UPSTREAM_GEO_BYPASS = 'https://dns.mullvad.net/dns-query'; config.value.UPSTREAM_TIMEOUT=5000; config.value.ECS_PREFIX_V4=24; config.value.ECS_PREFIX_V6=48; config.value.ALL_LISTS_REFRESH_INTERVAL=3600000; showToast('Reset to defaults! Click save.', 'info'); };
+                const validateUrl = (url) => {
+                    if (!url) return "Cannot be empty";
+                    if (!url.startsWith('https://')) return "Must start with https://";
+                    if (!url.includes('/dns-query')) return "Must be a DoH endpoint (usually ends in /dns-query)";
+                    try { new URL(url); } catch (e) { return "Invalid URL format"; }
+                    return "";
+                };
+
+                const testDnsQuery = async (url) => {
+                    try {
+                        const testUrl = new URL(url);
+                        testUrl.searchParams.set('dns', 'q80BAAABAAAAAAAAA3d3dwdleGFtcGxlA2NvbQAAAQAB'); // Base64 for www.example.com A
+                        const res = await fetch(testUrl.toString(), {
+                            headers: { 'Accept': 'application/dns-message' },
+                            signal: AbortSignal.timeout(3000)
+                        });
+                        return res.ok;
+                    } catch (e) { return false; }
+                };
+
+                const saveUpstreams = async () => {
+                    saving.value = true;
+                    // Reset errors
+                    uvPrimary.value = validateUrl(upstreamForm.value.UPSTREAM_PRIMARY);
+                    uvFallback.value = validateUrl(upstreamForm.value.UPSTREAM_FALLBACK);
+                    uvGeo.value = validateUrl(upstreamForm.value.UPSTREAM_GEO_BYPASS);
+                    
+                    const t = parseInt(upstreamForm.value.UPSTREAM_TIMEOUT);
+                    uvTimeout.value = (isNaN(t) || t < 500) ? "Must be >= 500" : "";
+                    const i = parseInt(upstreamForm.value.ALL_LISTS_REFRESH_INTERVAL);
+                    uvInterval.value = (isNaN(i) || i < 60000) ? "Must be >= 60000 (1m)" : "";
+                    const v4 = parseInt(upstreamForm.value.ECS_PREFIX_V4);
+                    uvV4.value = (isNaN(v4) || v4 < 1 || v4 > 32) ? "Must be 1-32" : "";
+                    const v6 = parseInt(upstreamForm.value.ECS_PREFIX_V6);
+                    uvV6.value = (isNaN(v6) || v6 < 1 || v6 > 128) ? "Must be 1-128" : "";
+
+                    if (uvPrimary.value || uvFallback.value || uvGeo.value || uvTimeout.value || uvInterval.value || uvV4.value || uvV6.value) {
+                        showToast('Please fix validation errors before saving', 'error');
+                        saving.value = false;
+                        return;
+                    }
+
+                    showToast('Testing primary DNS connection...', 'info');
+                    const primaryOk = await testDnsQuery(upstreamForm.value.UPSTREAM_PRIMARY);
+                    if (!primaryOk) {
+                        uvPrimary.value = "DNS test failed. Is DoH supported?";
+                        showToast('Failed to connect to primary resolver', 'error');
+                        saving.value = false;
+                        return;
+                    }
+
+                    updateConfig({ 
+                        UPSTREAM_PRIMARY: upstreamForm.value.UPSTREAM_PRIMARY, 
+                        UPSTREAM_FALLBACK: upstreamForm.value.UPSTREAM_FALLBACK, 
+                        UPSTREAM_GEO_BYPASS: upstreamForm.value.UPSTREAM_GEO_BYPASS, 
+                        UPSTREAM_TIMEOUT: t, 
+                        ECS_INJECTION_ENABLED: upstreamForm.value.ECS_INJECTION_ENABLED,
+                        ECS_PREFIX_V4: v4, 
+                        ECS_PREFIX_V6: v6, 
+                        ALL_LISTS_REFRESH_INTERVAL: i 
+                    }, 'Upstream DNS configurations staged 🔧');
+                    saving.value = false;
+                };
+
+                const resetUpstreams = () => { 
+                    upstreamForm.value = {
+                        UPSTREAM_PRIMARY: 'https://bu0eg1tdzu.cloudflare-gateway.com/dns-query',
+                        UPSTREAM_FALLBACK: 'https://rhpcv957tj.cloudflare-gateway.com/dns-query',
+                        UPSTREAM_GEO_BYPASS: 'https://dns.mullvad.net/dns-query',
+                        UPSTREAM_TIMEOUT: 5000, ALL_LISTS_REFRESH_INTERVAL: 3600000,
+                        ECS_INJECTION_ENABLED: true, ECS_PREFIX_V4: 24, ECS_PREFIX_V6: 48
+                    };
+                    clearUv('primary'); clearUv('fallback'); clearUv('geo');
+                    clearUv('timeout'); clearUv('interval'); clearUv('v4'); clearUv('v6');
+                    showToast('Reset local form to defaults. Click Save Changes to commit.', 'info'); 
+                };
 
                 // ===== LISTS =====
                 const reloadCurrentRawText = () => {
@@ -2388,6 +2802,87 @@
                     return patched;
                 };
 
+                const prepareSync = () => {
+                    if (!initialSnapshot.value || !hasChanges.value) return;
+                    
+                    try {
+                        const oldSnap = JSON.parse(initialSnapshot.value);
+                        const diffLog = [];
+                        let idCounter = 1;
+
+                        // Check Config & Upstreams
+                        if (oldSnap.c) {
+                            for (const k in config.value) {
+                                if (JSON.stringify(config.value[k]) !== JSON.stringify(oldSnap.c[k])) {
+                                    diffLog.push({
+                                        id: idCounter++, category: 'Configuration', type: 'config', key: k,
+                                        label: `Setting: ${k}`,
+                                        detail: `${oldSnap.c[k]} ➔ ${config.value[k]}`,
+                                        selected: true
+                                    });
+                                }
+                            }
+                        }
+
+                        // Check Custom Lists Content
+                        if (oldSnap.cd) {
+                            for (const k in lists.value) {
+                                if (JSON.stringify(lists.value[k]) !== JSON.stringify(oldSnap.cd[k])) {
+                                    diffLog.push({
+                                        id: idCounter++, category: 'Custom Rules', type: 'list', key: k,
+                                        label: `Local List: ${listTabLabels[k] || k}`,
+                                        detail: `Changed from ${oldSnap.cd[k]?.length||0} to ${(lists.value[k]||[]).length} rules`,
+                                        selected: true
+                                    });
+                                }
+                            }
+                        }
+
+                        // Check Remote URLs
+                        if (oldSnap.u) {
+                            for (const k in customUrls.value) {
+                                if (k.endsWith('_text')) continue;
+                                if (JSON.stringify(customUrls.value[k]) !== JSON.stringify(oldSnap.u[k])) {
+                                    diffLog.push({
+                                        id: idCounter++, category: 'Remote Subscriptions', type: 'url', key: k,
+                                        label: `Subscription: ${listTabLabels[k] || k}`,
+                                        detail: `Changed from ${oldSnap.u[k]?.length||0} to ${(customUrls.value[k]||[]).length} URLs`,
+                                        selected: true
+                                    });
+                                }
+                            }
+                        }
+
+                        reviewDiff.value = diffLog;
+                        showReviewModal.value = true;
+                    } catch (e) {
+                        console.error('Diff error:', e);
+                        saveAll(); // fallback to direct save on diff error
+                    }
+                };
+
+                const executeSync = () => {
+                    showReviewModal.value = false;
+                    
+                    // Filter out unselected items by restoring them from initialSnapshot
+                    try {
+                        const oldSnap = JSON.parse(initialSnapshot.value);
+                        const unselected = reviewDiff.value.filter(i => !i.selected);
+                        
+                        for (const item of unselected) {
+                            if (item.type === 'config') {
+                                config.value[item.key] = oldSnap.c[item.key];
+                            } else if (item.type === 'list') {
+                                lists.value[item.key] = JSON.parse(JSON.stringify(oldSnap.cd[item.key] || []));
+                            } else if (item.type === 'url') {
+                                customUrls.value[item.key] = JSON.parse(JSON.stringify(oldSnap.u[item.key] || []));
+                            }
+                        }
+                    } catch (e) { console.error('Revert error:', e); }
+
+                    saveAll();
+                };
+
                 const saveAll = async () => {
                     syncState.value = 'github';
                     syncMsg.value = 'Committing changes to GitHub...';
@@ -2519,7 +3014,12 @@
                 };
 
                 const forceSync = async (calledInternally = false) => {
-                    if (!calledInternally) syncing.value = true;
+                    if (!calledInternally) {
+                        if (!confirm("No pending changes detected. Are you sure you want to trigger a manual GitHub workflow run to regenerate lists?")) {
+                            return false;
+                        }
+                        syncing.value = true;
+                    }
                     try {
                         let workflowId = 'Update_DNS_Blocklists.yml';
                         try {
@@ -2604,6 +3104,8 @@
                     tabLabels, listTabLabels, textPlaceholders, urlPlaceholders,
                     features, filters, allFeatures,
                     activeFeatureCount, activeFilterCount, activeCount, totalCount, totalCustomEntries,
+                    upstreamForm, uvPrimary, uvFallback, uvGeo, uvTimeout, uvInterval, uvV4, uvV6, clearUv,
+                    showReviewModal, reviewDiff, groupedReviewDiff, selectedDiffCount, prepareSync, executeSync,
                     register, login, logout, toggleFeature, saveUpstreams, resetUpstreams,
                     switchToLists, saveListText, saveUrlText, forceSync, saveAll,
                     fmt, timeAgo, showToast, theme, toggleTheme, topbarStatus
