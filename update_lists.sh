@@ -32,12 +32,7 @@ extract_domains() {
 echo "Downloading and processing blocklists..."
 {
   # EXTERNAL_BLOCKLIST_START
-curl -fsSL --max-time 60 \
-  https://adguardteam.github.io/HostlistsRegistry/assets/filter_16.txt \
-  https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt \
-  https://raw.githubusercontent.com/bibicadotnet/AdGuard-Home-blocklists/refs/heads/main/byme.txt \
-  https://raw.githubusercontent.com/VeleSila/yhosts/master/hosts \
-  https://badmojr.github.io/1Hosts/Lite/adblock.txt
+# No external blocklists
 # EXTERNAL_BLOCKLIST_END
   
   # Gộp thêm domain mày gõ tay trên Admin
@@ -49,8 +44,7 @@ curl -fsSL --max-time 60 \
 echo "Downloading and processing allowlists..."
 {
   # EXTERNAL_ALLOWLIST_START
-curl -fsSL --max-time 60 \
-  https://raw.githubusercontent.com/bibicadotnet/AdGuard-Home-blocklists/refs/heads/main/whitelist.txt
+# No external allowlists
 # EXTERNAL_ALLOWLIST_END
   
   # Gộp thêm domain mày gõ tay trên Admin
