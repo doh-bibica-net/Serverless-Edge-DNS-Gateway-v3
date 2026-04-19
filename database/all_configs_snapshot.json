@@ -19,7 +19,7 @@
     "DEBUG_ENABLED": false
   },
   "custom_lists": {
-    "blocklist": "",
+    "blocklist": "baomoi.com",
     "allowlist": "",
     "redirect_rules": "www.bilibili.tv www.bilibili.tv.w.cdngslb.com\nupos-sz-mirrorcos.bilivideo.com upos-hz-mirrorakam.akamaized.net\nupos-sz-mirrorcosb.bilivideo.com upos-hz-mirrorakam.akamaized.net\nupos-sz-mirrorbos.bilivideo.com upos-hz-mirrorakam.akamaized.net\nupos-sz-mirrorhw.bilivideo.com upos-hz-mirrorakam.akamaized.net\nupos-sz-mirrorhwb.bilivideo.com upos-hz-mirrorakam.akamaized.net\nupos-sz-upcdnbda2.bilivideo.com upos-hz-mirrorakam.akamaized.net\nupos-sz-upcdnws.bilivideo.com upos-hz-mirrorakam.akamaized.net\nupos-sz-mirrorali.bilivideo.com upos-hz-mirrorakam.akamaized.net\nupos-sz-mirroraliov.bilivideo.com upos-hz-mirrorakam.akamaized.net\nupos-sz-mirror08h.bilivideo.com upos-hz-mirrorakam.akamaized.net\nupos-sz-mirrorcosov.bilivideo.com upos-hz-mirrorakam.akamaized.net\nmedium.com rocket.net\npornhub.com www.pornhub.com\ndeo.shopeemobile.com deo.shopeemobile.com-v1.edgesuite.net\ncf.shopee.vn cf.shopee.vn.akamaized.net\ndown-vn.img.susercontent.com zshopee.v.baishan-cloud.net",
     "private_tlds": "internal\nlocaldomain\nexample\ninvalid\nlocalhost\ntest\nlocal\nonion\nlan\nhome\nfpt\nunused\nrouter\ninstant.arubanetworks.com\nsetmeup.arubanetworks.com\nasusrouter.com\nrouter.asus.com\nrouter.asus\nwww.asusrouter.com\noasisauth.h3c.com\nrouterlogin.com\nwww.routerlogin.com\ntplogin.cn\nmiwifi.com\nitotolink.net\nplex.direct\npeiluyou.com\ntplinkwifi.net\ntendawifi.com\nhiwifi.com\nleike.cc\nrouter.ctc\nphicomm.me\nts.net\nhome.arpa\nin-addr.arpa\nip6.arpa\n192.168.1.1\n192.168.1.0",
@@ -39,5 +39,5 @@
     "blocklist_text": "https://adguardteam.github.io/HostlistsRegistry/assets/filter_16.txt\nhttps://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt\nhttps://raw.githubusercontent.com/bibicadotnet/AdGuard-Home-blocklists/refs/heads/main/byme.txt\nhttps://raw.githubusercontent.com/VeleSila/yhosts/master/hosts\nhttps://badmojr.github.io/1Hosts/Lite/adblock.txt",
     "allowlist_text": "https://raw.githubusercontent.com/bibicadotnet/AdGuard-Home-blocklists/refs/heads/main/whitelist.txt"
   },
-  "_updated": 1776567635994
+  "_updated": 1776567801987
 }
