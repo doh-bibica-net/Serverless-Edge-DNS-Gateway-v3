@@ -2089,13 +2089,32 @@
                     return 'GitHub Status: Unknown';
                 });
 
-                // Upstreams UI State
-                const upstreamForm = ref({
-                    UPSTREAM_PRIMARY: '', UPSTREAM_FALLBACK: '', UPSTREAM_GEO_BYPASS: '',
-                    UPSTREAM_TIMEOUT: 5000, ALL_LISTS_REFRESH_INTERVAL: 3600000,
-                    ECS_INJECTION_ENABLED: true, ECS_PREFIX_V4: 24, ECS_PREFIX_V6: 48
-                });
-                
+                // Config Defaults
+                const DEFAULT_CONFIG = {
+                    UPSTREAM_PRIMARY: 'https://bu0eg1tdzu.cloudflare-gateway.com/dns-query',
+                    UPSTREAM_FALLBACK: 'https://rhpcv957tj.cloudflare-gateway.com/dns-query',
+                    UPSTREAM_GEO_BYPASS: 'https://dns.mullvad.net/dns-query',
+                    UPSTREAM_TIMEOUT: 5000,
+                    ALL_LISTS_REFRESH_INTERVAL: 3600000,
+                    AD_BLOCK_ENABLED: true,
+                    ECS_INJECTION_ENABLED: true,
+                    ECS_PREFIX_V4: 24,
+                    ECS_PREFIX_V6: 48,
+                    BLOCK_ANY: true,
+                    BLOCK_AAAA: true,
+                    BLOCK_PTR: true,
+                    BLOCK_HTTPS: true,
+                    BLOCK_PRIVATE_TLD: true,
+                    DNS_REDIRECT_ENABLED: true,
+                    MULLVAD_UPSTREAM_ENABLED: true,
+                    BLOCKLIST_URL: '/rules/blocklists.txt',
+                    ALLOWLIST_URL: '/rules/allowlists.txt',
+                    PRIVATE_TLD_URL: '/rules/private_tlds.txt',
+                    REDIRECT_RULES_URL: '/rules/redirect_rules.txt',
+                    MULLVAD_UPSTREAM_URL: '/rules/mullvad_upstream.txt',
+                    DEBUG_ENABLED: false
+                };
+
                 // Form Validation errors
                 const uvPrimary = ref(''); const uvFallback = ref(''); const uvGeo = ref('');
                 const uvTimeout = ref(''); const uvInterval = ref('');
@@ -2410,7 +2429,7 @@
                     try {
                         const snap = await githubGet('database/all_configs_snapshot.json');
                         if (snap) {
-                            config.value = snap.config || {};
+                            config.value = { ...DEFAULT_CONFIG, ...(snap.config || {}) };
                             lists.value = snap.custom_lists || {};
                             
                             // Convert lists back to arrays if they are strings from the snapshot
@@ -2430,38 +2449,21 @@
                             customUrls.value = snap.urls || { blocklist: [], allowlist: [] };
                         } else {
                             // First time setup or fallback
-                            config.value = {
-                                UPSTREAM_PRIMARY: 'https://bu0eg1tdzu.cloudflare-gateway.com/dns-query',
-                                UPSTREAM_FALLBACK: 'https://rhpcv957tj.cloudflare-gateway.com/dns-query',
-                                UPSTREAM_GEO_BYPASS: 'https://dns.mullvad.net/dns-query',
-                                UPSTREAM_TIMEOUT: 5000,
-                                ALL_LISTS_REFRESH_INTERVAL: 3600000,
-                                AD_BLOCK_ENABLED: true,
-                                ECS_INJECTION_ENABLED: true,
-                                ECS_PREFIX_V4: 24,
-                                ECS_PREFIX_V6: 48,
-                                BLOCK_ANY: true,
-                                BLOCK_AAAA: true,
-                                BLOCK_PTR: true,
-                                BLOCK_HTTPS: true,
-                                BLOCK_PRIVATE_TLD: true,
-                                DNS_REDIRECT_ENABLED: true,
-                                MULLVAD_UPSTREAM_ENABLED: true,
-                            };
+                            config.value = { ...DEFAULT_CONFIG };
                             lists.value = { blocklist: [], allowlist: [], redirect_rules: [], private_tlds: [], mullvad_upstream: [] };
                             customUrls.value = { blocklist: [], allowlist: [] };
                         }
 
                         // Init local form
                         upstreamForm.value = {
-                            UPSTREAM_PRIMARY: config.value.UPSTREAM_PRIMARY || 'https://bu0eg1tdzu.cloudflare-gateway.com/dns-query',
-                            UPSTREAM_FALLBACK: config.value.UPSTREAM_FALLBACK || 'https://rhpcv957tj.cloudflare-gateway.com/dns-query',
-                            UPSTREAM_GEO_BYPASS: config.value.UPSTREAM_GEO_BYPASS || 'https://dns.mullvad.net/dns-query',
-                            UPSTREAM_TIMEOUT: config.value.UPSTREAM_TIMEOUT || 5000,
-                            ALL_LISTS_REFRESH_INTERVAL: config.value.ALL_LISTS_REFRESH_INTERVAL || 3600000,
+                            UPSTREAM_PRIMARY: config.value.UPSTREAM_PRIMARY,
+                            UPSTREAM_FALLBACK: config.value.UPSTREAM_FALLBACK,
+                            UPSTREAM_GEO_BYPASS: config.value.UPSTREAM_GEO_BYPASS,
+                            UPSTREAM_TIMEOUT: config.value.UPSTREAM_TIMEOUT,
+                            ALL_LISTS_REFRESH_INTERVAL: config.value.ALL_LISTS_REFRESH_INTERVAL,
                             ECS_INJECTION_ENABLED: !!config.value.ECS_INJECTION_ENABLED,
-                            ECS_PREFIX_V4: config.value.ECS_PREFIX_V4 || 24,
-                            ECS_PREFIX_V6: config.value.ECS_PREFIX_V6 || 48
+                            ECS_PREFIX_V4: config.value.ECS_PREFIX_V4,
+                            ECS_PREFIX_V6: config.value.ECS_PREFIX_V6
                         };
 
                         stats.value = await githubGet('database/stats.json') || { lastFetch: new Date().toISOString() };
