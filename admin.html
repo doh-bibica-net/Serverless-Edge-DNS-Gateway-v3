@@ -2424,10 +2424,23 @@
                                     } else {
                                         lists.value[k] = lists.value[k].split('\n').map(l => l.trim()).filter(l => l);
                                     }
+                                    }
                                 }
                             }
 
                             customUrls.value = snap.urls || { blocklist: [], allowlist: [] };
+
+                            // Ensure all config keys exist even if missing from snapshot (Legacy support)
+                            const defaults = {
+                                BLOCKLIST_URL: '/rules/blocklists.txt',
+                                ALLOWLIST_URL: '/rules/allowlists.txt',
+                                PRIVATE_TLD_URL: '/rules/private_tlds.txt',
+                                REDIRECT_RULES_URL: '/rules/redirect_rules.txt',
+                                MULLVAD_UPSTREAM_URL: '/rules/mullvad_upstream.txt'
+                            };
+                            for (const k in defaults) {
+                                if (config.value[k] === undefined) config.value[k] = defaults[k];
+                            }
                         } else {
                             // First time setup or fallback
                             config.value = {
@@ -2447,6 +2460,11 @@
                                 BLOCK_PRIVATE_TLD: true,
                                 DNS_REDIRECT_ENABLED: true,
                                 MULLVAD_UPSTREAM_ENABLED: true,
+                                BLOCKLIST_URL: '/rules/blocklists.txt',
+                                ALLOWLIST_URL: '/rules/allowlists.txt',
+                                PRIVATE_TLD_URL: '/rules/private_tlds.txt',
+                                REDIRECT_RULES_URL: '/rules/redirect_rules.txt',
+                                MULLVAD_UPSTREAM_URL: '/rules/mullvad_upstream.txt'
                             };
                             lists.value = { blocklist: [], allowlist: [], redirect_rules: [], private_tlds: [], mullvad_upstream: [] };
                             customUrls.value = { blocklist: [], allowlist: [] };
