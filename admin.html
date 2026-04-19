@@ -2527,11 +2527,28 @@
                         return;
                     }
 
-                    showToast('Testing primary DNS connection...', 'info');
+                    showToast('Testing DNS connections...', 'info');
+                    
                     const primaryOk = await testDnsQuery(upstreamForm.value.UPSTREAM_PRIMARY);
                     if (!primaryOk) {
                         uvPrimary.value = "DNS test failed. Is DoH supported?";
                         showToast('Failed to connect to primary resolver', 'error');
+                        saving.value = false;
+                        return;
+                    }
+
+                    const fallbackOk = await testDnsQuery(upstreamForm.value.UPSTREAM_FALLBACK);
+                    if (!fallbackOk) {
+                        uvFallback.value = "DNS test failed. Is DoH supported?";
+                        showToast('Failed to connect to fallback resolver', 'error');
+                        saving.value = false;
+                        return;
+                    }
+
+                    const geoOk = await testDnsQuery(upstreamForm.value.UPSTREAM_GEO_BYPASS);
+                    if (!geoOk) {
+                        uvGeo.value = "DNS test failed. Is DoH supported?";
+                        showToast('Failed to connect to geo-bypass resolver', 'error');
                         saving.value = false;
                         return;
                     }
